@@ -1,7 +1,9 @@
 #include <iostream>
 
+using namespace std;
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
-    std::cout << "This is the start of our RayTracer!" << std::endl;
+    
+    cout << "This is the start of our RayTracer!" << endl;
     return 0;
 }
