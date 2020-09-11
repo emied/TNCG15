@@ -1,5 +1,4 @@
 #include <iostream>
-#include <list>
 
 using namespace std;
 
@@ -43,7 +42,16 @@ struct Camera{      //Convert to class
 
 
 int main() {
-    
     cout << "This is the start of our RayTracer!" << endl;
+    const int xWidth = 1920;
+    const int yWidth = 1080;
+    string filename = "Test.bmp";
+    ColorDbl* image = new ColorDbl[yWidth*xWidth];
+    for(int i = 0; i < yWidth; i++){
+        for(int j = 0; j < xWidth; j++){
+            image[i*xWidth+j] = ColorDbl{(double)(255*i/yWidth), (double)(255*j/xWidth), (double)(255*(i+j)/(xWidth+yWidth))};
+        }
+    }
+    cout << "Generated an image!" << endl;
     return 0;
 }
