@@ -6,6 +6,7 @@
 using namespace std;
 
 struct ColorDbl{
+    ColorDbl() : r(0), g(0), b(0) {}
     double r, g, b;
 };
 
@@ -41,14 +42,20 @@ Stream & operator<<(Stream & out, image const& img){
 }
 
 struct Vertex {
+    Vertex(double x, double y, double z, double w) : x(x), y(y), z(z), w(w){}
+    Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
     double x, y, z, w;
 };
 
 struct Direction {
+    Direction(double x, double y, double z) : x(x), y(y), z(z){}
+    Direction(Vertex in) : x(in.x),y(in.z),z(in.z){}
     double x, y, z;
 };
 
 struct Triangle {
+    Triangle(Vertex a, Vertex b, Vertex c) : a(a), b(b), c(c), color(), normal(a){}  //Invalid normal! (glm::cross(b-a, c-a))
+
     Vertex a, b, c; //names?
     ColorDbl color;
     Direction normal;
@@ -74,7 +81,29 @@ struct Camera{
 
 };
 
-void createScene(){
+void createScene(Scene *world){
+    //Roof
+    //Triangle temp = Triangle();
+    //world->triangles[0] = temp;
+
+
+    //Floor
+    //world->triangles[6] = new Triangle();
+
+
+    //Walls
+    //Wall 1
+
+    //Wall 2
+
+    //Wall 3
+
+    //Wall 4
+
+    //Wall 5
+
+    //Wall 6
+
 
 }
 
