@@ -21,10 +21,12 @@ struct image{
     vector<uint8_t> data;
 };
 
+void generateImage(image *image);
+
 template<class Stream>
 Stream & operator<<(Stream & out, image const& img){
     uint32_t w = img.w, h = img.h;
-    uint32_t pad = w* -3 & 3;
+    uint32_t pad = w * -3 & 3;
     uint32_t total = 54 + 3*w*h + pad*h;
     uint32_t head[13] = {total, 0, 54, 40, w, h, (24<<16)|1};
     char const* data = (char const*)img.data.data();
@@ -78,21 +80,29 @@ int main() {
     cout << "This is the start of our RayTracer!" << endl;
     const int xWidth = 1920;
     const int yWidth = 1080;
-    string filename = "Test.bmp";
     image img{xWidth,yWidth};
-    for(int i = 0; i < yWidth; i++){
-        double normI = ((double)i)/((double)yWidth);
-        for(int j = 0; j < xWidth; j++){
-            double normJ = ((double)j)/((double)xWidth);
-            img.r(j,i) = (255*normI);
-            img.g(j,i) = (255*normJ);
-            img.b(j,i) = (255*((double)(i+j)/(double)(xWidth+yWidth)));
-        }
-    }
+    generateImage(&img);
 
     cout << "Generated an image!" << endl;
     ofstream(".\\generated.bmp", ios_base::out | ios_base::binary) << img;
     cout << "Wrote file generated.bmp" << endl;
     return 0;
 }
+
+void generateImage(image *image) {
+    int width = image->w, height = image->h;
+
+
+    for(int i = 0; i < height; i++){
+        double normI = ((double)i)/((double)height);
+        for(int j = 0; j < width; j++){
+            double normJ = ((double)j)/((double)width);
+            image->r(j,i) = (255*normI);
+            image->g(j,i) = (255*normJ);
+            image->b(j,i) = (255*((double)(i+j)/(double)(width+height)));
+        }
+    }
+}
+
+
 
