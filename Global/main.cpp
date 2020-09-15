@@ -39,7 +39,7 @@ Stream & operator<<(Stream & out, image const& img){
     }
     return out;
 }
-/*
+
 struct Vertex {
     double x, y, z, w;
 };
@@ -73,7 +73,10 @@ struct Camera{
     Pixel image[800][800];
 
 };
-*/
+
+void createScene(){
+
+}
 
 
 int main() {
@@ -84,7 +87,7 @@ int main() {
     generateGradientImage(&img);
 
     cout << "Generated an image!" << endl;
-    ofstream(".\\generated.bmp", ios_base::out | ios_base::binary) << img;
+    ofstream("generated.bmp", ios_base::out | ios_base::binary) << img;
     cout << "Wrote file generated.bmp" << endl;
     return 0;
 }
