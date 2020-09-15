@@ -1,3 +1,0 @@
-/Users/Emil/Desktop/TNCG15/Global/cmake-build-debug/CMakeFiles/CMakeTmp/CMakeFiles/rebuild_cache.dir
-/Users/Emil/Desktop/TNCG15/Global/cmake-build-debug/CMakeFiles/CMakeTmp/CMakeFiles/edit_cache.dir
-/Users/Emil/Desktop/TNCG15/Global/cmake-build-debug/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_4b1fe.dir
