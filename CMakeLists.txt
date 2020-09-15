@@ -15,4 +15,6 @@ add_executable(TNCG15
         Global/.idea/modules.xml
         Global/.idea/vcs.xml
         Global/CMakeLists.txt
-        Global/main.cpp)
+        Global/main.cpp
+        glm/glm/glm.hpp)
+
