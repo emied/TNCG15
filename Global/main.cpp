@@ -73,12 +73,6 @@ struct Camera{
 };
 */
 
-void generateImage(ColorDbl *imageData, const int width, const int width1) {
-    //Generate header
-
-
-}
-
 
 int main() {
     cout << "This is the start of our RayTracer!" << endl;
