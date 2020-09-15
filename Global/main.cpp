@@ -21,7 +21,7 @@ struct image{
     vector<uint8_t> data;
 };
 
-void generateImage(image *image);
+void generateGradientImage(image *image);
 
 template<class Stream>
 Stream & operator<<(Stream & out, image const& img){
@@ -81,7 +81,7 @@ int main() {
     const int xWidth = 1920;
     const int yWidth = 1080;
     image img{xWidth,yWidth};
-    generateImage(&img);
+    generateGradientImage(&img);
 
     cout << "Generated an image!" << endl;
     ofstream(".\\generated.bmp", ios_base::out | ios_base::binary) << img;
@@ -89,7 +89,7 @@ int main() {
     return 0;
 }
 
-void generateImage(image *image) {
+void generateGradientImage(image *image) {
     int width = image->w, height = image->h;
 
 
