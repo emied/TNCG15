@@ -83,7 +83,7 @@ struct Triangle {
         vec1 = v1;
         vec2 = v2;
         vec3 = v3;
-        glm::vec3 normal = glm::cross(v1.position-v3.position,v2.position-v3.position);
+        glm::vec3 normal = glm::cross(v2.position-v1.position,v3.position-v1.position);
         color = ColorDbl();
     }
 
