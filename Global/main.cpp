@@ -7,6 +7,16 @@ using namespace std;
 
 struct ColorDbl{
     double r, g, b;
+    glm::vec3 rgb;
+
+    ColorDbl(): r(0.0), g(0.0), b(0.0) {} //default constructor
+
+    ColorDbl(glm::vec3 color)
+    {
+      r = color.x;
+      g = color.y;
+      b = color.z;
+    }
 };
 
 //Image generation from https://stackoverflow.com/a/62946358
@@ -41,17 +51,27 @@ Stream & operator<<(Stream & out, image const& img){
 }
 
 struct Vertex {
-    double x, y, z, w;
+    glm::vec3 position;
+    double x, y, z, homogeneous;
+    Vertex():position(glm::vec3(0.0,0.0,0.0)), homogeneous(1.0) {}   //Default constructor
 };
 
 struct Direction {
-    double x, y, z;
+    glm::vec3 direction;
 };
 
 struct Triangle {
-    Vertex a, b, c; //names?
+  //  Vertex a, b, c; //names?
+  //  Direction normal;
     ColorDbl color;
-    Direction normal;
+    glm::vec3 vec1, vec2, vec3;
+
+    Triangle(){ //Default constructor
+        vec1 = glm::vec3();
+        vec2 = glm::vec3();
+        vec3 = glm::vec3();
+        color = ColorDbl();
+    }
 };
 
 struct Scene {
