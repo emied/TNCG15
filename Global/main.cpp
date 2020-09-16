@@ -6,6 +6,7 @@
 using namespace std;
 
 struct ColorDbl{
+    ColorDbl() : r(0), g(0), b(0) {}
     double r, g, b;
     glm::vec3 rgb;
 
@@ -52,17 +53,28 @@ Stream & operator<<(Stream & out, image const& img){
 
 struct Vertex {
     glm::vec3 position;
-    double x, y, z, homogeneous;
-    Vertex():position(glm::vec3(0.0,0.0,0.0)), homogeneous(1.0) {}   //Default constructor
+    double x, y, z, w;
+    Vertex():position(glm::vec3(0.0,0.0,0.0)), w(1.0) {}   //Default constructor
+    Vertex(double x, double y, double z, double w) : x(x), y(y), z(z), w(w){}
+    Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
 };
 
 struct Direction {
     glm::vec3 direction;
+    Direction(double x, double y, double z) : x(x), y(y), z(z){}
+    Direction(Vertex in) : x(in.x),y(in.z),z(in.z){}
+    double x, y, z;
+
 };
 
 struct Triangle {
   //  Vertex a, b, c; //names?
   //  Direction normal;
+    //Vertex(double x, double y, double z, double w) : x(x), y(y), z(z), w(w){}
+    //Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
+    //double x, y, z, w;
+
+
     ColorDbl color;
     glm::vec3 vec1, vec2, vec3;
 
@@ -94,7 +106,29 @@ struct Camera{
 
 };
 
-void createScene(){
+void createScene(Scene *world){
+    //Roof
+    //Triangle temp = Triangle();
+    //world->triangles[0] = temp;
+
+
+    //Floor
+    //world->triangles[6] = new Triangle();
+
+
+    //Walls
+    //Wall 1
+
+    //Wall 2
+
+    //Wall 3
+
+    //Wall 4
+
+    //Wall 5
+
+    //Wall 6
+
 
 }
 
@@ -126,6 +160,3 @@ void generateGradientImage(image *image) {
         }
     }
 }
-
-
-
