@@ -6,10 +6,9 @@
 using namespace std;
 
 struct ColorDbl{
-    ColorDbl() : r(0), g(0), b(0) {}
+
     double r, g, b;
     glm::vec3 rgb;
-
     ColorDbl(): r(0.0), g(0.0), b(0.0) {} //default constructor
 
     ColorDbl(glm::vec3 color)
@@ -74,22 +73,28 @@ struct Triangle {
     //Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
     //double x, y, z, w;
 
-
     ColorDbl color;
-    glm::vec3 vec1, vec2, vec3;
+    Vertex vec1, vec2, vec3;
+    glm::vec3 normal;
 
-    Triangle(){ //Default constructor
-        vec1 = glm::vec3();
-        vec2 = glm::vec3();
-        vec3 = glm::vec3();
+    Triangle(){}
+
+    Triangle(Vertex v1, Vertex v2, Vertex v3){
+        vec1 = v1;
+        vec2 = v2;
+        vec3 = v3;
+        glm::vec3 normal = glm::cross(v3.position-v1.position,v3.position-v2.position);
         color = ColorDbl();
     }
+
 };
 
 struct Scene {
     Triangle triangles[24];
+    Vertex vertices[14];
     ColorDbl colors[6];
 };
+
 struct Ray {
     Vertex start, end;
     ColorDbl color;
@@ -107,13 +112,55 @@ struct Camera{
 };
 
 void createScene(Scene *world){
+
+    //Vertex points r = roof, f = floor
+    Vertex vrtx0 = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
+    Vertex vrtx1 = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
+    Vertex vrtx2 = Vertex(0.0, 6.0, 5.0, 1.0); //vrtx2r
+    Vertex vrtx3 = Vertex(10.0, 6.0, 5.0, 1.0); //vrtx3r
+    Vertex vrtx4 = Vertex(13.0, 0.0, 5.0, 1.0); //vrtx4r
+    Vertex vrtx5 = Vertex(10.0, -6.0, 5.0, 1.0); //vrtx5r
+    Vertex vrtx6 = Vertex(0.0, -6.0, 5.0, 1.0); //vrtx6r
+
+    Vertex vrtx7 = Vertex(5.0, 0.0, -5.0, 1.0); //vrtx0f mitten botten
+    Vertex vrtx8 = Vertex(-3.0, 0.0, -5.0, 1.0); //vrtx1f
+    Vertex vrtx9 = Vertex(0.0, 6.0, -5.0, 1.0); //vrtx2f
+    Vertex vrtx10 = Vertex(10.0, 6.0, -5.0, 1.0); //vrtx3f
+    Vertex vrtx11 = Vertex(13.0, 0.0, -5.0, 1.0); //vrtx4f
+    Vertex vrtx12 = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
+    Vertex vrtx13 = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
+
     //Roof
-    //Triangle temp = Triangle();
-    //world->triangles[0] = temp;
+    Triangle tri1= Triangle(vrtx0, vrtx2, vrtx1);
+    Triangle tri2= Triangle(vrtx0, vrtx3, vrtx2);
+    Triangle tri3= Triangle(vrtx0, vrtx4, vrtx3);
+    Triangle tri4= Triangle(vrtx0, vrtx5, vrtx4);
+    Triangle tri5= Triangle(vrtx0, vrtx6, vrtx5);
+    Triangle tri6= Triangle(vrtx0, vrtx1, vrtx6);
+
+    world->triangles[0] = tri1;
+    world->triangles[1] = tri2;
+    world->triangles[2] = tri3;
+    world->triangles[3] = tri4;
+    world->triangles[4] = tri5;
+    world->triangles[5] = tri6;
 
 
     //Floor
-    //world->triangles[6] = new Triangle();
+
+    Triangle tri7= Triangle(vrtx7, vrtx8, vrtx9);
+    Triangle tri8= Triangle(vrtx7, vrtx9, vrtx10);
+    Triangle tri9= Triangle(vrtx7, vrtx10, vrtx11);
+    Triangle tri10= Triangle(vrtx7, vrtx11, vrtx12);
+    Triangle tri11= Triangle(vrtx7, vrtx12, vrtx13);
+    Triangle tri12= Triangle(vrtx7, vrtx13, vrtx8);
+
+    world->triangles[6] = tri7;
+    world->triangles[7] = tri8;
+    world->triangles[8] = tri9;
+    world->triangles[9] = tri10;
+    world->triangles[10] = tri11;
+    world->triangles[11] = tri12;
 
 
     //Walls
