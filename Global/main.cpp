@@ -83,7 +83,7 @@ struct Triangle {
         vec1 = v1;
         vec2 = v2;
         vec3 = v3;
-        glm::vec3 normal = glm::cross(v3.position-v1.position,v3.position-v2.position);
+        glm::vec3 normal = glm::cross(v1.position-v3.position,v2.position-v3.position);
         color = ColorDbl();
     }
 
@@ -131,12 +131,12 @@ void createScene(Scene *world){
     Vertex vrtx13 = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
 
     //Roof
-    Triangle tri1= Triangle(vrtx0, vrtx2, vrtx1);
-    Triangle tri2= Triangle(vrtx0, vrtx3, vrtx2);
-    Triangle tri3= Triangle(vrtx0, vrtx4, vrtx3);
-    Triangle tri4= Triangle(vrtx0, vrtx5, vrtx4);
-    Triangle tri5= Triangle(vrtx0, vrtx6, vrtx5);
-    Triangle tri6= Triangle(vrtx0, vrtx1, vrtx6);
+    Triangle tri1= Triangle(vrtx0, vrtx1, vrtx2);
+    Triangle tri2= Triangle(vrtx0, vrtx2, vrtx3);
+    Triangle tri3= Triangle(vrtx0, vrtx3, vrtx4);
+    Triangle tri4= Triangle(vrtx0, vrtx4, vrtx5);
+    Triangle tri5= Triangle(vrtx0, vrtx5, vrtx6);
+    Triangle tri6= Triangle(vrtx0, vrtx6, vrtx1);
 
     world->triangles[0] = tri1;
     world->triangles[1] = tri2;
@@ -147,13 +147,12 @@ void createScene(Scene *world){
 
 
     //Floor
-
-    Triangle tri7= Triangle(vrtx7, vrtx8, vrtx9);
-    Triangle tri8= Triangle(vrtx7, vrtx9, vrtx10);
-    Triangle tri9= Triangle(vrtx7, vrtx10, vrtx11);
-    Triangle tri10= Triangle(vrtx7, vrtx11, vrtx12);
-    Triangle tri11= Triangle(vrtx7, vrtx12, vrtx13);
-    Triangle tri12= Triangle(vrtx7, vrtx13, vrtx8);
+    Triangle tri7= Triangle(vrtx7, vrtx9, vrtx8);
+    Triangle tri8= Triangle(vrtx7, vrtx10, vrtx9);
+    Triangle tri9= Triangle(vrtx7, vrtx11, vrtx10);
+    Triangle tri10= Triangle(vrtx7, vrtx12, vrtx11);
+    Triangle tri11= Triangle(vrtx7, vrtx13, vrtx12);
+    Triangle tri12= Triangle(vrtx7, vrtx8, vrtx13);
 
     world->triangles[6] = tri7;
     world->triangles[7] = tri8;
@@ -165,18 +164,35 @@ void createScene(Scene *world){
 
     //Walls
     //Wall 1
-
+    Triangle tri13= Triangle(vrtx2, vrtx1, vrtx8);
+    Triangle tri14= Triangle(vrtx2, vrtx8, vrtx9);
+    world->triangles[12] = tri13;
+    world->triangles[13] = tri14;
     //Wall 2
-
+    Triangle tri15= Triangle(vrtx3, vrtx2, vrtx9);
+    Triangle tri16= Triangle(vrtx3, vrtx9, vrtx10);
+    world->triangles[14] = tri15;
+    world->triangles[15] = tri16;
     //Wall 3
-
+    Triangle tri17= Triangle(vrtx4, vrtx3, vrtx10);
+    Triangle tri18= Triangle(vrtx4, vrtx10, vrtx11);
+    world->triangles[16] = tri17;
+    world->triangles[17] = tri18;
     //Wall 4
-
+    Triangle tri19= Triangle(vrtx5, vrtx4, vrtx11);
+    Triangle tri20= Triangle(vrtx5, vrtx11, vrtx12);
+    world->triangles[18] = tri19;
+    world->triangles[19] = tri20;
     //Wall 5
-
+    Triangle tri21= Triangle(vrtx6, vrtx5, vrtx12);
+    Triangle tri22= Triangle(vrtx6, vrtx12, vrtx13);
+    world->triangles[20] = tri21;
+    world->triangles[21] = tri22;
     //Wall 6
-
-
+    Triangle tri23= Triangle(vrtx1, vrtx6, vrtx13);
+    Triangle tri24= Triangle(vrtx1, vrtx13, vrtx8);
+    world->triangles[22] = tri23;
+    world->triangles[23] = tri24;
 }
 
 
