@@ -67,11 +67,6 @@ struct Direction {
 };
 
 struct Triangle {
-  //  Vertex a, b, c; //names?
-  //  Direction normal;
-    //Vertex(double x, double y, double z, double w) : x(x), y(y), z(z), w(w){}
-    //Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
-    //double x, y, z, w;
 
     ColorDbl color;
     Vertex vec1, vec2, vec3;
