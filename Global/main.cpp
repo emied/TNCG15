@@ -213,8 +213,12 @@ void generateGradientImage(image *image) {
         for(int j = 0; j < width; j++){
             double normJ = ((double)j)/((double)width);
             image->r(j,i) = (255*normI);
-            image->g(j,i) = (255*normJ);
-            image->b(j,i) = (255*((double)(i+j)/(double)(width+height)));
+            if(normJ >= normI) {
+                image->g(j, i) = (255 * normI / normJ);
+            } else {
+                image->g(j,i) = (255 * normJ / normI);
+            }
+            image->b(j,i) = (255*normJ);
         }
     }
 }
