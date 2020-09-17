@@ -51,35 +51,62 @@ Stream & operator<<(Stream & out, image const& img){
 }
 
 struct Vertex {
-    glm::vec3 position;
-    double x, y, z, w;
-    Vertex():position(glm::vec3(0.0,0.0,0.0)), w(1.0) {}   //Default constructor
-    Vertex(double x, double y, double z, double w) : x(x), y(y), z(z), w(w){}
-    Vertex(double x, double y, double z) : x(x), y(y), z(z), w(1){}
+    glm::vec4 position;
+    //double x, y, z, w;
+    Vertex():position(glm::vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
+    Vertex(double x, double y, double z, double w) : position(glm::vec4(x, y, z, w)){}
+
+    glm::vec4 operator-(Vertex& other) const{
+        return this->position-other.position;
+    }
 };
 
 struct Direction {
     glm::vec3 direction;
-    Direction(double x, double y, double z) : x(x), y(y), z(z){}
-    Direction(Vertex in) : x(in.x),y(in.z),z(in.z){}
-    double x, y, z;
+    Direction(): direction(glm::vec3{}){}
+    Direction(Vertex in) : direction(in.position){}
 
 };
+
+struct Ray {
+    Vertex start, end;
+    ColorDbl color;
+
+
+};
+
 
 struct Triangle {
 
     ColorDbl color;
-    Vertex vec1, vec2, vec3;
+    Vertex vec0, vec1, vec2;
     glm::vec3 normal;
+    double d;
 
     Triangle(){}
 
     Triangle(Vertex v1, Vertex v2, Vertex v3){
-        vec1 = v1;
-        vec2 = v2;
-        vec3 = v3;
-        glm::vec3 normal = glm::cross(v2.position-v1.position,v3.position-v1.position);
+        vec0 = v1;
+        vec1 = v2;
+        vec2 = v3;
+        normal = glm::cross((glm::vec3)(v2.position-v1.position),(glm::vec3)(v3.position-v1.position));
+        d = glm::dot(normal, (glm::vec3)vec0.position);
         color = ColorDbl();
+    }
+
+
+    void rayIntersection(Ray intersectingRay) {     //Needs to return something WIP
+        //Möller-Trumbore
+        glm::vec3 T, E_1, E_2, D, P, Q;
+        T = (glm::vec3) (intersectingRay.start - vec0);
+        E_1 = (glm::vec3) (vec1 - vec0);
+        E_2 = (glm::vec3) (vec2 - vec0);
+        D = intersectingRay.end - intersectingRay.start;
+        P = glm::cross(D, E_2);
+        Q = glm::cross(T, E_1);
+        glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
+
+
     }
 
 };
@@ -89,12 +116,6 @@ struct Scene {
     Vertex vertices[14];
     ColorDbl colors[6];
 };
-
-struct Ray {
-    Vertex start, end;
-    ColorDbl color;
-};
-
 struct Pixel{
     ColorDbl r, g, b;
     Ray intersectingRay;        //Prepare for array/list/pointer
