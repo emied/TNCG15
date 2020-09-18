@@ -4,6 +4,7 @@
 #include <fstream>
 
 using namespace std;
+using namespace glm;
 
 struct ColorDbl{
 
@@ -55,6 +56,7 @@ struct Vertex {
     //double x, y, z, w;
     Vertex():position(glm::vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(glm::vec4(x, y, z, w)){}
+    Vertex(glm::vec3 in): position(in, 1.0){}
 
     glm::vec4 operator-(Vertex& other) const{
         return this->position-other.position;
@@ -82,10 +84,11 @@ struct Triangle {
 
     ColorDbl color;
     Vertex vec0, vec1, vec2;
-    glm::vec3 normal;
-    double d;
+    glm::vec3 normal{};
+    double d{};
 
-    Triangle(){}
+
+    Triangle() : Triangle(Vertex(glm::vec3{}),Vertex(glm::vec3{}),Vertex(glm::vec3{})){}
 
     Triangle(Vertex v1, Vertex v2, Vertex v3){
         vec0 = v1;
@@ -97,7 +100,7 @@ struct Triangle {
     }
 
 
-    bool rayIntersection(Ray& intersectingRay) {     //Needs to return something WIP
+    bool rayIntersection(Ray& intersectingRay) {
         //Möller-Trumbore
         glm::vec3 T, E_1, E_2, D, P, Q;
         T = (glm::vec3) (intersectingRay.start - vec0);
@@ -107,20 +110,36 @@ struct Triangle {
         P = glm::cross(D, E_2);
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
-        //Update intersectingRay here
-        return (tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0);
-
+        if(tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
+            //Update intersectingRay here
+            intersectingRay.endTriangle = this;
+            intersectingRay.intersectionPoint = Vertex(tuv);
+            return true;
+        } else {
+            return false;
+        }
     }
 
 };
 
+struct Scene;
 
-
+void createScene(Scene *world);
 
 struct Scene {
-    Triangle triangles[24];
-    Vertex vertices[14];
+    Triangle triangles[24]{};
+    //Vertex vertices[14];
     ColorDbl colors[6];
+    Scene(){
+        createScene(this);
+    }
+
+
+    void rayIntersection(Ray& intersectingRay){
+        for(int i = 0; i < 24 ;i++){
+            if(triangles[i].rayIntersection(intersectingRay)){break;}
+        }
+    }
 };
 struct Pixel{
     ColorDbl r, g, b;
@@ -160,6 +179,7 @@ void createScene(Scene *world){
     Triangle tri5= Triangle(vrtx0, vrtx5, vrtx6);
     Triangle tri6= Triangle(vrtx0, vrtx6, vrtx1);
 
+    world->colors[0] = ColorDbl(glm::vec3(255,0,0));
     world->triangles[0] = tri1;
     world->triangles[1] = tri2;
     world->triangles[2] = tri3;
