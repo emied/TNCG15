@@ -68,13 +68,15 @@ struct Direction {
 
 };
 
+struct Triangle;
+
 struct Ray {
     Vertex start, end;
     ColorDbl color;
-
+    Triangle* endTriangle;
+    Vertex intersectionPoint;
 
 };
-
 
 struct Triangle {
 
@@ -95,7 +97,7 @@ struct Triangle {
     }
 
 
-    void rayIntersection(Ray intersectingRay) {     //Needs to return something WIP
+    bool rayIntersection(Ray& intersectingRay) {     //Needs to return something WIP
         //Möller-Trumbore
         glm::vec3 T, E_1, E_2, D, P, Q;
         T = (glm::vec3) (intersectingRay.start - vec0);
@@ -105,11 +107,15 @@ struct Triangle {
         P = glm::cross(D, E_2);
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
-
+        //Update intersectingRay here
+        return (tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0);
 
     }
 
 };
+
+
+
 
 struct Scene {
     Triangle triangles[24];
