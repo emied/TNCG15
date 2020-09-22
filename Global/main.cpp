@@ -56,11 +56,8 @@ struct Vertex {
     //double x, y, z, w;
     Vertex():position(glm::vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(glm::vec4(x, y, z, w)){}
+    Vertex(double x, double y, double z) : position(glm::vec4(x, y, z, 1.0)){}
     Vertex(glm::vec3 in): position(in, 1.0){}
-
-    glm::vec4 operator-(Vertex& other) const{
-        return this->position-other.position;
-    }
 };
 
 struct Direction {
@@ -103,10 +100,10 @@ struct Triangle {
     bool rayIntersection(Ray& intersectingRay) {
         //Möller-Trumbore
         glm::vec3 T, E_1, E_2, D, P, Q;
-        T = (glm::vec3) (intersectingRay.start - vec0);
-        E_1 = (glm::vec3) (vec1 - vec0);
-        E_2 = (glm::vec3) (vec2 - vec0);
-        D = intersectingRay.end - intersectingRay.start;
+        T = (glm::vec3) (intersectingRay.start.position - vec0.position);
+        E_1 = (glm::vec3) (vec1.position - vec0.position);
+        E_2 = (glm::vec3) (vec2.position - vec0.position);
+        D = intersectingRay.end.position - intersectingRay.start.position;
         P = glm::cross(D, E_2);
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
@@ -114,6 +111,7 @@ struct Triangle {
             //Update intersectingRay here
             intersectingRay.endTriangle = this;
             intersectingRay.intersectionPoint = Vertex(tuv);
+            intersectingRay.color = this->color;
             return true;
         } else {
             return false;
@@ -142,14 +140,30 @@ struct Scene {
     }
 };
 struct Pixel{
-    ColorDbl r, g, b;
+    Pixel() : color(ColorDbl{}){}
+    Pixel(ColorDbl rgb) : color(rgb){}
+    ColorDbl color;
     Ray intersectingRay;        //Prepare for array/list/pointer
 };
 
 struct Camera{
+    Camera(Vertex left, Vertex right, int width, int height): leftEye(left), rightEye(right), image(width*height*3), perspective(false){}
     Vertex leftEye, rightEye;
-    Pixel image[800][800];
+    vector<Pixel> image;
+    bool perspective;
 
+    void setPerspective(bool p){
+        perspective = p;
+    }
+
+    void togglePerspective(){
+        perspective = !perspective;
+    }
+
+    Vertex getEye() {
+        if(perspective){return leftEye;}
+        else{return rightEye;}
+    }
 };
 
 void createScene(Scene *world){
@@ -186,7 +200,11 @@ void createScene(Scene *world){
     world->triangles[3] = tri4;
     world->triangles[4] = tri5;
     world->triangles[5] = tri6;
-
+    int j = 0;
+    for (int i = j*6; i < (j+1)*6; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
 
     //Floor = Green
     Triangle tri7= Triangle(vrtx7, vrtx9, vrtx8);
@@ -203,6 +221,10 @@ void createScene(Scene *world){
     world->triangles[9] = tri10;
     world->triangles[10] = tri11;
     world->triangles[11] = tri12;
+    for (int i = j*6; i < (j+1)*6; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
 
 
     //Walls
@@ -212,36 +234,59 @@ void createScene(Scene *world){
     world->colors[2] = ColorDbl(vec3(0,0,255));
     world->triangles[12] = tri13;
     world->triangles[13] = tri14;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
     //Wall 2 = Teal
     Triangle tri15= Triangle(vrtx3, vrtx2, vrtx9);
     Triangle tri16= Triangle(vrtx3, vrtx9, vrtx10);
     world->colors[3] = ColorDbl(vec3(0,255,255));
     world->triangles[14] = tri15;
     world->triangles[15] = tri16;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
     //Wall 3 = Yellow
     Triangle tri17= Triangle(vrtx4, vrtx3, vrtx10);
     Triangle tri18= Triangle(vrtx4, vrtx10, vrtx11);
     world->colors[4] = ColorDbl(vec3(255,255,0));
     world->triangles[16] = tri17;
     world->triangles[17] = tri18;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
     //Wall 4 = Purple
     Triangle tri19= Triangle(vrtx5, vrtx4, vrtx11);
     Triangle tri20= Triangle(vrtx5, vrtx11, vrtx12);
     world->colors[5] = ColorDbl(vec3(255,0,255));
     world->triangles[18] = tri19;
     world->triangles[19] = tri20;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
     //Wall 5 = Black
     Triangle tri21= Triangle(vrtx6, vrtx5, vrtx12);
     Triangle tri22= Triangle(vrtx6, vrtx12, vrtx13);
     world->colors[6] = ColorDbl(vec3(0,0,0));
     world->triangles[20] = tri21;
     world->triangles[21] = tri22;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+    j++;
     //Wall 6 = White
     Triangle tri23= Triangle(vrtx1, vrtx6, vrtx13);
     Triangle tri24= Triangle(vrtx1, vrtx13, vrtx8);
     world->colors[7] = ColorDbl(vec3(255,255,255));
     world->triangles[22] = tri23;
     world->triangles[23] = tri24;
+    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
 }
 
 
@@ -255,6 +300,29 @@ int main() {
     cout << "Generated an image!" << endl;
     ofstream("generated.bmp", ios_base::out | ios_base::binary) << img;
     cout << "Wrote file generated.bmp" << endl;
+
+    Scene world;
+    const int width = 800;
+    const int height = 800;
+    const double pixelSize = 2.0/width;
+    Camera cam{Vertex(-2,0,0), Vertex(-1,0,0), width, height};
+    cam.setPerspective(false);
+
+
+    createScene(&world);
+    double maxIntensity = 0;
+    double dy = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
+    double dz = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
+    for(int i = 0; i < width; i++){
+        for(int j = 0; j < height; j++){
+            Ray current{};
+            current.start = cam.getEye();
+            current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
+            world.rayIntersection(current);
+            cam.image[i*width+j] = Pixel(current.color);
+        }
+    }
+
     return 0;
 }
 
