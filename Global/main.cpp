@@ -320,6 +320,9 @@ int main() {
             current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
             world.rayIntersection(current);
             cam.image[i*width+j] = Pixel(current.color);
+            if(current.color.r > maxIntensity){maxIntensity = current.color.r;}
+            if(current.color.g > maxIntensity){maxIntensity = current.color.g;}
+            if(current.color.b > maxIntensity){maxIntensity = current.color.b;}
         }
     }
 
