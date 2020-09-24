@@ -321,12 +321,12 @@ int main() {
         }
     }
 
-    //write cam.image to outout img
+    //write cam.image to output img
     for(int i = 0; i < height; i++){
         for(int j = 0; j < width; j++){
-            img.r(j,i) = cam.image[i*width+j].color.r;
-            img.g(j,i) = cam.image[i*width+j].color.g;
-            img.b(j,i) = cam.image[i*width+j].color.b;
+            img.r(i,j) = cam.image[i*width+j].color.r;
+            img.g(i,j) = cam.image[i*width+j].color.g;
+            img.b(i,j) = cam.image[i*width+j].color.b;
         }
     }
 
