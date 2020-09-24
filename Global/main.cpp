@@ -125,7 +125,8 @@ struct Scene;
 void createScene(Scene *world);
 
 struct Scene {
-    Triangle triangles[24]{};
+    Triangle triangles[28]{};
+
     //Vertex vertices[14];
     ColorDbl colors[8];
     Scene(){
@@ -184,6 +185,12 @@ void createScene(Scene *world){
     Vertex vrtx11 = Vertex(13.0, 0.0, -5.0, 1.0); //vrtx4f
     Vertex vrtx12 = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
     Vertex vrtx13 = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
+
+    //Vertex points for Tethrahedron
+    Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
+    Vertex vrtx15 = Vertex(2.0, -2.0, 0.0, 1.0);
+    Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
+    Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
 
     //Roof = Red
     Triangle tri1= Triangle(vrtx0, vrtx1, vrtx2);
@@ -287,6 +294,26 @@ void createScene(Scene *world){
     for (int i = (j+4)*2; i < (j+4+1)*2; i++){
         world->triangles[i].color = world->colors[j];
     }
+    j++;
+
+
+    //create Tethraheddron
+    Triangle tri25= Triangle(vrtx1, vrtx6, vrtx13);
+    Triangle tri26= Triangle(vrtx1, vrtx13, vrtx8);
+    Triangle tri27= Triangle(vrtx1, vrtx6, vrtx13);
+    Triangle tri28= Triangle(vrtx1, vrtx13, vrtx8);
+    world->triangles[24] = tri25;
+    world->triangles[25] = tri26;
+    world->triangles[26] = tri27;
+    world->triangles[27] = tri28;
+    world->triangles[24].color = world->colors[0];
+    world->triangles[25].color = world->colors[0];
+    world->triangles[26].color = world->colors[0];
+    world->triangles[27].color = world->colors[0];
+    for (int i = (j+4)*2; i < (j+4+2)*2; i++){
+        world->triangles[i].color = world->colors[j];
+    }
+
 }
 
 
