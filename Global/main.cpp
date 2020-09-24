@@ -295,11 +295,6 @@ int main() {
     const int xWidth = 1920;
     const int yWidth = 1080;
     image img{xWidth,yWidth};
-    generateGradientImage(&img);
-
-    cout << "Generated an image!" << endl;
-    ofstream("generated.bmp", ios_base::out | ios_base::binary) << img;
-    cout << "Wrote file generated.bmp" << endl;
 
     Scene world;
     const int width = 800;
@@ -326,9 +321,26 @@ int main() {
         }
     }
 
+    //write cam.image to outout img
+    for(int i = 0; i < height; i++){
+        for(int j = 0; j < width; j++){
+            img.r(j,i) = cam.image[i*width+j].color.r;
+            img.g(j,i) = cam.image[i*width+j].color.g;
+            img.b(j,i) = cam.image[i*width+j].color.b;
+        }
+    }
+
+     cout << "Generated an image!" << endl;
+     ofstream("generated.bmp", ios_base::out | ios_base::binary) << img;
+     cout << "Wrote file generated.bmp" << endl;
+
     return 0;
 }
 
+
+
+
+//to be removed
 void generateGradientImage(image *image) {
     int width = image->w, height = image->h;
 
@@ -339,7 +351,7 @@ void generateGradientImage(image *image) {
             double normJ = ((double)j)/((double)width);
             image->r(j,i) = (255*normI);
             if(normJ >= normI) {
-                image->g(j, i) = (255 * normI / normJ);
+                image->g(j,i) = (255 * normI / normJ);
             } else {
                 image->g(j,i) = (255 * normJ / normI);
             }
