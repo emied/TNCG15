@@ -236,7 +236,7 @@ void createScene(Scene *world){
 
     //Walls
     //Wall 1 = Blue
-    Triangle tri13= Triangle(vrtx2, vrtx1, vrtx8);
+    Triangle tri13= Triangle(vrtx2, vrtx2, vrtx2); // ska vara 2,1,8, blir dock knas då
     Triangle tri14= Triangle(vrtx2, vrtx8, vrtx9);
     world->colors[2] = ColorDbl(vec3(0,0,255));
     world->triangles[12] = tri13;
