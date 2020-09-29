@@ -9,9 +9,8 @@ using namespace glm;
 struct ColorDbl{
 
     double r, g, b;
-    glm::vec3 rgb;
     ColorDbl(): r(0.0), g(0.0), b(0.0) {} //default constructor
-
+    ColorDbl(double red, double green, double blue) : r(red), g(green), b(blue){}
     ColorDbl(glm::vec3 color)
     {
       r = color.x;
@@ -44,10 +43,15 @@ Stream & operator<<(Stream & out, image const& img){
 
     out.write("BM", 2);
     out.write((char*)head, 52);
-    for(int i=0; i<h;i++){
+
+    for(int i=0; i<h ;i++){
         out.write(data + (3*w * i), 3 * w);
         out.write((char*)&pad, pad);
-    }
+    }/*
+    for(int i=h-1; i>=0;i--){
+        out.write(data + (3*w * i), 3 * w);
+        out.write((char*)&pad, pad);
+    }*/
     return out;
 }
 
@@ -107,7 +111,10 @@ struct Triangle {
         P = glm::cross(D, E_2);
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
-        if(tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
+        if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
+            if(rand() % 100 > 98){
+                cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
+            }
             //Update intersectingRay here
             intersectingRay.endTriangle = this;
             intersectingRay.intersectionPoint = Vertex(tuv);
@@ -118,6 +125,10 @@ struct Triangle {
         }
     }
 
+};
+
+struct Tetrahedron {
+    ColorDbl color;
 };
 
 struct Scene;
@@ -170,21 +181,21 @@ struct Camera{
 void createScene(Scene *world){
 
     //Vertex points r = roof, f = floor
-    Vertex vrtx0 = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
-    Vertex vrtx1 = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
-    Vertex vrtx2 = Vertex(0.0, 6.0, 5.0, 1.0); //vrtx2r
-    Vertex vrtx3 = Vertex(10.0, 6.0, 5.0, 1.0); //vrtx3r
-    Vertex vrtx4 = Vertex(13.0, 0.0, 5.0, 1.0); //vrtx4r
-    Vertex vrtx5 = Vertex(10.0, -6.0, 5.0, 1.0); //vrtx5r
-    Vertex vrtx6 = Vertex(0.0, -6.0, 5.0, 1.0); //vrtx6r
+    Vertex vrtx0r = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
+    Vertex vrtx1r = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
+    Vertex vrtx2r = Vertex(0.0, 6.0, 5.0, 1.0); //vrtx2r
+    Vertex vrtx3r = Vertex(10.0, 6.0, 5.0, 1.0); //vrtx3r
+    Vertex vrtx4r = Vertex(13.0, 0.0, 5.0, 1.0); //vrtx4r
+    Vertex vrtx5r = Vertex(10.0, -6.0, 5.0, 1.0); //vrtx5r
+    Vertex vrtx6r = Vertex(0.0, -6.0, 5.0, 1.0); //vrtx6r
 
-    Vertex vrtx7 = Vertex(5.0, 0.0, -5.0, 1.0); //vrtx0f mitten botten
-    Vertex vrtx8 = Vertex(-3.0, 0.0, -5.0, 1.0); //vrtx1f
-    Vertex vrtx9 = Vertex(0.0, 6.0, -5.0, 1.0); //vrtx2f
-    Vertex vrtx10 = Vertex(10.0, 6.0, -5.0, 1.0); //vrtx3f
-    Vertex vrtx11 = Vertex(13.0, 0.0, -5.0, 1.0); //vrtx4f
-    Vertex vrtx12 = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
-    Vertex vrtx13 = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
+    Vertex vrtx0f = Vertex(5.0, 0.0, -5.0, 1.0); //vrtx0f mitten botten
+    Vertex vrtx1f = Vertex(-3.0, 0.0, -5.0, 1.0); //vrtx1f
+    Vertex vrtx2f = Vertex(0.0, 6.0, -5.0, 1.0); //vrtx2f
+    Vertex vrtx3f = Vertex(10.0, 6.0, -5.0, 1.0); //vrtx3f
+    Vertex vrtx4f = Vertex(13.0, 0.0, -5.0, 1.0); //vrtx4f
+    Vertex vrtx5f = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
+    Vertex vrtx6f = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
 
     //Vertex points for Tethrahedron
     Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
@@ -193,115 +204,70 @@ void createScene(Scene *world){
     Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
 
     //Roof = Red
-    Triangle tri1= Triangle(vrtx0, vrtx1, vrtx2);
-    Triangle tri2= Triangle(vrtx0, vrtx2, vrtx3);
-    Triangle tri3= Triangle(vrtx0, vrtx3, vrtx4);
-    Triangle tri4= Triangle(vrtx0, vrtx4, vrtx5);
-    Triangle tri5= Triangle(vrtx0, vrtx5, vrtx6);
-    Triangle tri6= Triangle(vrtx0, vrtx6, vrtx1);
-
-    world->colors[0] = ColorDbl(glm::vec3(255,0,0));
-    world->triangles[0] = tri1;
-    world->triangles[1] = tri2;
-    world->triangles[2] = tri3;
-    world->triangles[3] = tri4;
-    world->triangles[4] = tri5;
-    world->triangles[5] = tri6;
-    int j = 0;
-    for (int i = j*6; i < (j+1)*6; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[0] = ColorDbl(255,0,0);
+    world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
+    world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
+    world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
+    world->triangles[3] = Triangle(vrtx0r, vrtx4r, vrtx5r);
+    world->triangles[4] = Triangle(vrtx0r, vrtx5r, vrtx6r);
+    world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r);
 
     //Floor = Green
-    Triangle tri7= Triangle(vrtx7, vrtx9, vrtx8);
-    Triangle tri8= Triangle(vrtx7, vrtx10, vrtx9);
-    Triangle tri9= Triangle(vrtx7, vrtx11, vrtx10);
-    Triangle tri10= Triangle(vrtx7, vrtx12, vrtx11);
-    Triangle tri11= Triangle(vrtx7, vrtx13, vrtx12);
-    Triangle tri12= Triangle(vrtx7, vrtx8, vrtx13);
-
-    world->colors[1] = ColorDbl(vec3(0,255,0));
-    world->triangles[6] = tri7;
-    world->triangles[7] = tri8;
-    world->triangles[8] = tri9;
-    world->triangles[9] = tri10;
-    world->triangles[10] = tri11;
-    world->triangles[11] = tri12;
-    for (int i = j*6; i < (j+1)*6; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[1] = ColorDbl(0,255,0);
+    world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f);
+    world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f);
+    world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f);
+    world->triangles[9] =  Triangle(vrtx0f, vrtx5f, vrtx4f);
+    world->triangles[10] = Triangle(vrtx0f, vrtx6f, vrtx5f);
+    world->triangles[11] = Triangle(vrtx0f, vrtx1f, vrtx6f);
 
 
     //Walls
     //Wall 1 = Blue
-    Triangle tri13= Triangle(vrtx2, vrtx2, vrtx2); // ska vara 2,1,8, blir dock knas då
-    Triangle tri14= Triangle(vrtx2, vrtx8, vrtx9);
-    world->colors[2] = ColorDbl(vec3(0,0,255));
-    world->triangles[12] = tri13;
-    world->triangles[13] = tri14;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[2] = ColorDbl(0,0,255);
+    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);// ska vara 2,1,8, blir dock knas då
+    world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f);
+
     //Wall 2 = Teal
-    Triangle tri15= Triangle(vrtx3, vrtx2, vrtx9);
-    Triangle tri16= Triangle(vrtx3, vrtx9, vrtx10);
-    world->colors[3] = ColorDbl(vec3(0,255,255));
-    world->triangles[14] = tri15;
-    world->triangles[15] = tri16;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[3] = ColorDbl(0,255,255);
+    world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
+    world->triangles[15] = Triangle(vrtx2f, vrtx2r, vrtx3f);
+
     //Wall 3 = Yellow
-    Triangle tri17= Triangle(vrtx4, vrtx3, vrtx10);
-    Triangle tri18= Triangle(vrtx4, vrtx10, vrtx11);
-    world->colors[4] = ColorDbl(vec3(255,255,0));
-    world->triangles[16] = tri17;
-    world->triangles[17] = tri18;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[4] = ColorDbl(255,255,0);
+    world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f);
+    world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r);
+
     //Wall 4 = Purple
-    Triangle tri19= Triangle(vrtx5, vrtx4, vrtx11);
-    Triangle tri20= Triangle(vrtx5, vrtx11, vrtx12);
-    world->colors[5] = ColorDbl(vec3(255,0,255));
-    world->triangles[18] = tri19;
-    world->triangles[19] = tri20;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[5] = ColorDbl(255,0,255);
+    world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f);
+    world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f);
+
     //Wall 5 = Black
-    Triangle tri21= Triangle(vrtx6, vrtx5, vrtx12);
-    Triangle tri22= Triangle(vrtx6, vrtx12, vrtx13);
-    world->colors[6] = ColorDbl(vec3(0,0,0));
-    world->triangles[20] = tri21;
-    world->triangles[21] = tri22;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-    j++;
+    world->colors[6] = ColorDbl(0,0,0);
+    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx5f);
+    world->triangles[21] = Triangle(vrtx6r, vrtx5f, vrtx6f);
+
     //Wall 6 = White
-    Triangle tri23= Triangle(vrtx1, vrtx6, vrtx13);
-    Triangle tri24= Triangle(vrtx1, vrtx13, vrtx8);
-    world->colors[7] = ColorDbl(vec3(255,255,255));
-    world->triangles[22] = tri23;
-    world->triangles[23] = tri24;
-    for (int i = (j+4)*2; i < (j+4+1)*2; i++){
-        world->triangles[i].color = world->colors[j];
+    world->colors[7] = ColorDbl(255,255,255);
+    world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
+    world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
+
+
+    for(int j = 0; j < 24; j++){
+        if(j < 12) {
+            world->triangles[j].color = world->colors[j/6];
+        } else {
+            world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
+        }
     }
-    j++;
 
-
+    /*
     //create Tethraheddron
-    Triangle tri25= Triangle(vrtx1, vrtx6, vrtx13);
-    Triangle tri26= Triangle(vrtx1, vrtx13, vrtx8);
-    Triangle tri27= Triangle(vrtx1, vrtx6, vrtx13);
-    Triangle tri28= Triangle(vrtx1, vrtx13, vrtx8);
+    Triangle tri25= Triangle(vrtx1r, vrtx6r, vrtx6f);
+    Triangle tri26= Triangle(vrtx1r, vrtx6f, vrtx1f);
+    Triangle tri27= Triangle(vrtx1r, vrtx6r, vrtx6f);
+    Triangle tri28= Triangle(vrtx1r, vrtx6f, vrtx1f);
     world->triangles[24] = tri25;
     world->triangles[25] = tri26;
     world->triangles[26] = tri27;
@@ -310,10 +276,7 @@ void createScene(Scene *world){
     world->triangles[25].color = world->colors[0];
     world->triangles[26].color = world->colors[0];
     world->triangles[27].color = world->colors[0];
-    for (int i = (j+4)*2; i < (j+4+2)*2; i++){
-        world->triangles[i].color = world->colors[j];
-    }
-
+    */
 }
 
 
@@ -338,9 +301,10 @@ int main() {
     double dz = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
     for(int i = 0; i < width; i++){
         for(int j = 0; j < height; j++){
+            cam.image[i*width+j] = ColorDbl(100,100,100);
             Ray current{};
             current.start = cam.getEye();
-            current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
+            current.end = Vertex(0,(i-400 + dy)*pixelSize,(j-400 + dz)*pixelSize);
             world.rayIntersection(current);
             cam.image[i*width+j] = Pixel(current.color);
             if(current.color.r > maxIntensity){maxIntensity = current.color.r;}
@@ -352,9 +316,9 @@ int main() {
     //write cam.image to output img
     for(int i = 0; i < height; i++){
         for(int j = 0; j < width; j++){
-            img.r(i,j) = cam.image[i*width+j].color.r;
-            img.g(i,j) = cam.image[i*width+j].color.g;
-            img.b(i,j) = cam.image[i*width+j].color.b;
+            img.r(i,j) = cam.image[(height-i)*width+j].color.r;
+            img.g(i,j) = cam.image[(height-i)*width+j].color.g;
+            img.b(i,j) = cam.image[(height-i)*width+j].color.b;
         }
     }
 
