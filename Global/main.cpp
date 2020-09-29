@@ -2,6 +2,7 @@
 #include "../glm/glm/glm.hpp"
 #include <vector>
 #include <fstream>
+#include <random>
 
 using namespace std;
 using namespace glm;
@@ -57,7 +58,6 @@ Stream & operator<<(Stream & out, image const& img){
 
 struct Vertex {
     glm::vec4 position;
-    //double x, y, z, w;
     Vertex():position(glm::vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(glm::vec4(x, y, z, w)){}
     Vertex(double x, double y, double z) : position(glm::vec4(x, y, z, 1.0)){}
@@ -77,7 +77,7 @@ struct Ray {
     Vertex start, end;
     ColorDbl color;
     Triangle* endTriangle;
-    Vertex intersectionPoint;
+    Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
 
 };
 
@@ -100,6 +100,18 @@ struct Triangle {
         color = ColorDbl();
     }
 
+    Triangle(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
+        vec0 = v1;
+        vec1 = v2;
+        vec2 = v3;
+        normal = glm::cross((glm::vec3)(v2.position-v1.position),(glm::vec3)(v3.position-v1.position));
+        d = glm::dot(normal, (glm::vec3)vec0.position);
+        color = ColorDbl();
+        if(dot(normal, (vec3)v4.position) > 0){
+            normal = -normal;
+        }
+    }
+
 
     bool rayIntersection(Ray& intersectingRay) {
         //Möller-Trumbore
@@ -115,10 +127,12 @@ struct Triangle {
             /*if(rand() % 100 > 98){
                 cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
             }*/
-            //Update intersectingRay here
-            intersectingRay.endTriangle = this;
-            intersectingRay.intersectionPoint = Vertex(tuv);
-            intersectingRay.color = this->color;
+            if(intersectingRay.intersectionPoint.position.x > tuv.x) {
+                //Update intersectingRay here
+                intersectingRay.endTriangle = this;
+                intersectingRay.intersectionPoint = Vertex(tuv);
+                intersectingRay.color = this->color;
+            }
             return true;
         } else {
             return false;
@@ -126,17 +140,38 @@ struct Triangle {
     }
 
 };
-
+/*
 struct Tetrahedron {
     ColorDbl color;
-};
+    vector<Triangle> triangles;
+    Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
+        color = c;
+        triangles[0] = Triangle(v1, v2, v3, v4);
+        triangles[1] = Triangle(v1, v2, v4, v3);
+        triangles[2] = Triangle(v1, v3, v4, v2);
+        triangles[3] = Triangle(v2, v3, v4, v1);
+    }
 
+    Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
+
+    bool rayIntersection(Ray& intersectingRay) {
+        bool collision = false;
+        for(Triangle tri : triangles) {
+            if(tri.rayIntersection(intersectingRay)){
+                intersectingRay.color = color;
+                collision = true;
+            }
+        }
+        return collision;
+    }
+};
+*/
 struct Scene;
 
 void createScene(Scene *world);
 
 struct Scene {
-    Triangle triangles[28]{};
+    Triangle triangles[24]{};
 
     //Vertex vertices[14];
     ColorDbl colors[8];
@@ -197,14 +232,12 @@ void createScene(Scene *world){
     Vertex vrtx5f = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
     Vertex vrtx6f = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
 
-    //Vertex points for Tethrahedron
-    Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
-    Vertex vrtx15 = Vertex(2.0, -2.0, 0.0, 1.0);
-    Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
-    Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
-
-    //Roof = Grey
-    world->colors[0] = ColorDbl(50,50,50);
+    //Roof = Random Grey
+    random_device rd;
+    mt19937  gen(rd());
+    uniform_int_distribution<> distrib(50,200);
+    int val = distrib ( gen);
+    world->colors[0] = ColorDbl(val,val,val);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
     world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
     world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
@@ -253,7 +286,7 @@ void createScene(Scene *world){
     world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
     world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
 
-
+    //Actually assign colours
     for(int j = 0; j < 24; j++){
         if(j < 12) {
             world->triangles[j].color = world->colors[j/6];
@@ -261,9 +294,13 @@ void createScene(Scene *world){
             world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
         }
     }
-
-    /*
-    //create Tethraheddron
+/*
+    //Vertex points for Tetrahedron
+    Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
+    Vertex vrtx15 = Vertex(2.0, -2.0, 0.0, 1.0);
+    Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
+    Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
+    //create Tetrahedron
     Triangle tri25= Triangle(vrtx1r, vrtx6r, vrtx6f);
     Triangle tri26= Triangle(vrtx1r, vrtx6f, vrtx1f);
     Triangle tri27= Triangle(vrtx1r, vrtx6r, vrtx6f);
@@ -276,7 +313,7 @@ void createScene(Scene *world){
     world->triangles[25].color = world->colors[0];
     world->triangles[26].color = world->colors[0];
     world->triangles[27].color = world->colors[0];
-    */
+*/
 }
 
 
@@ -304,7 +341,7 @@ int main() {
             cam.image[i*width+j] = ColorDbl(100,100,100);
             Ray current{};
             current.start = cam.getEye();
-            current.end = Vertex(0,(i-400 + dy)*pixelSize,(j-400 + dz)*pixelSize);
+            current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
             world.rayIntersection(current);
             cam.image[i*width+j] = Pixel(current.color);
             if(current.color.r > maxIntensity){maxIntensity = current.color.r;}
@@ -316,9 +353,9 @@ int main() {
     //write cam.image to output img
     for(int i = 0; i < height; i++){
         for(int j = 0; j < width; j++){
-            img.r(i,j) = cam.image[(height-i)*width+j].color.r;
-            img.g(i,j) = cam.image[(height-i)*width+j].color.g;
-            img.b(i,j) = cam.image[(height-i)*width+j].color.b;
+            img.r(i,j) = cam.image[(height-1-i)*width+j].color.r;
+            img.g(i,j) = cam.image[(height-1-i)*width+j].color.g;
+            img.b(i,j) = cam.image[(height-1-i)*width+j].color.b;
         }
     }
 
