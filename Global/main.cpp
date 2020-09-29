@@ -140,10 +140,15 @@ struct Triangle {
     }
 
 };
-/*
+
 struct Tetrahedron {
     ColorDbl color;
     vector<Triangle> triangles;
+    Tetrahedron() {
+        color = ColorDbl{};
+        //triangles = vector<Triangle>{};
+
+    }
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
         color = c;
         triangles[0] = Triangle(v1, v2, v3, v4);
@@ -165,14 +170,14 @@ struct Tetrahedron {
         return collision;
     }
 };
-*/
+
 struct Scene;
 
 void createScene(Scene *world);
 
 struct Scene {
     Triangle triangles[24]{};
-
+    Tetrahedron tetras{};
     //Vertex vertices[14];
     ColorDbl colors[8];
     Scene(){
@@ -184,6 +189,7 @@ struct Scene {
         for(int i = 0; i < 24 ;i++){
             if(triangles[i].rayIntersection(intersectingRay)){break;}
         }
+        //tetras[0].rayIntersection(intersectingRay);
     }
 };
 struct Pixel{
@@ -294,25 +300,18 @@ void createScene(Scene *world){
             world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
         }
     }
-/*
+
     //Vertex points for Tetrahedron
     Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
     Vertex vrtx15 = Vertex(2.0, -2.0, 0.0, 1.0);
     Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
     Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
     //create Tetrahedron
-    Triangle tri25= Triangle(vrtx1r, vrtx6r, vrtx6f);
-    Triangle tri26= Triangle(vrtx1r, vrtx6f, vrtx1f);
-    Triangle tri27= Triangle(vrtx1r, vrtx6r, vrtx6f);
-    Triangle tri28= Triangle(vrtx1r, vrtx6f, vrtx1f);
-    world->triangles[24] = tri25;
-    world->triangles[25] = tri26;
-    world->triangles[26] = tri27;
-    world->triangles[27] = tri28;
-    world->triangles[24].color = world->colors[0];
-    world->triangles[25].color = world->colors[0];
-    world->triangles[26].color = world->colors[0];
-    world->triangles[27].color = world->colors[0];
+    /*world->tetras = Tetrahedron(vec3(0,0,0),
+                                   vec3(2,-2,0),
+                                   vec3(2,2,0),
+                                   vec3(1,0,-4),
+                                   ColorDbl(0,150,0));
 */
 }
 
