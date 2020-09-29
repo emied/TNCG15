@@ -321,7 +321,6 @@ int main() {
     cout << "This is the start of our RayTracer!" << endl;
     const int xWidth = 1920;
     const int yWidth = 1080;
-    image img{xWidth,yWidth};
 
     Scene world;
     const int width = 800;
@@ -330,6 +329,8 @@ int main() {
     Camera cam{Vertex(-2,0,0), Vertex(-1,0,0), width, height};
     cam.setPerspective(false);
 
+
+    image img{width,height};
 
     createScene(&world);
     double maxIntensity = 0;
