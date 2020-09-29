@@ -311,8 +311,8 @@ void createScene(Scene *world){
                                    vec3(2,-2,0),
                                    vec3(2,2,0),
                                    vec3(1,0,-4),
-                                   ColorDbl(0,150,0));
-*/
+                                   ColorDbl(0,150,0));*/
+
 }
 
 
