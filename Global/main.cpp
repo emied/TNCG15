@@ -112,9 +112,9 @@ struct Triangle {
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
-            if(rand() % 100 > 98){
+            /*if(rand() % 100 > 98){
                 cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
-            }
+            }*/
             //Update intersectingRay here
             intersectingRay.endTriangle = this;
             intersectingRay.intersectionPoint = Vertex(tuv);
