@@ -203,8 +203,8 @@ void createScene(Scene *world){
     Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
     Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
 
-    //Roof = Red
-    world->colors[0] = ColorDbl(255,0,0);
+    //Roof = Grey
+    world->colors[0] = ColorDbl(50,50,50);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
     world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
     world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
@@ -212,8 +212,8 @@ void createScene(Scene *world){
     world->triangles[4] = Triangle(vrtx0r, vrtx5r, vrtx6r);
     world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r);
 
-    //Floor = Green
-    world->colors[1] = ColorDbl(0,255,0);
+    //Floor = White
+    world->colors[1] = ColorDbl(255,255,255);
     world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f);
     world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f);
     world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f);
@@ -223,33 +223,33 @@ void createScene(Scene *world){
 
 
     //Walls
-    //Wall 1 = Blue
-    world->colors[2] = ColorDbl(0,0,255);
+    //Wall 1 = Red
+    world->colors[2] = ColorDbl(255,0,0);
     world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);// ska vara 2,1,8, blir dock knas då
     world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f);
 
-    //Wall 2 = Teal
-    world->colors[3] = ColorDbl(0,255,255);
+    //Wall 2 = Yellow
+    world->colors[3] = ColorDbl(255,255,0);
     world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
     world->triangles[15] = Triangle(vrtx2f, vrtx2r, vrtx3f);
 
-    //Wall 3 = Yellow
-    world->colors[4] = ColorDbl(255,255,0);
+    //Wall 3 = Green
+    world->colors[4] = ColorDbl(0,255,0);
     world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f);
     world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r);
 
-    //Wall 4 = Purple
-    world->colors[5] = ColorDbl(255,0,255);
+    //Wall 4 = Teal
+    world->colors[5] = ColorDbl(0,255,255);
     world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f);
     world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f);
 
-    //Wall 5 = Black
-    world->colors[6] = ColorDbl(0,0,0);
-    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx5f);
-    world->triangles[21] = Triangle(vrtx6r, vrtx5f, vrtx6f);
+    //Wall 5 = Blue
+    world->colors[6] = ColorDbl(0,0,255);
+    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f);
+    world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r);
 
-    //Wall 6 = White
-    world->colors[7] = ColorDbl(255,255,255);
+    //Wall 6 = Purple
+    world->colors[7] = ColorDbl(255,0,255);
     world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
     world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
 
