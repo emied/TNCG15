@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <random>
+#include <list>
 
 using namespace std;
 using namespace glm;
@@ -74,11 +75,24 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
+    //KAOS
+//    Ray(Vertex vertex1, Vertex vertex2) {
+//        start = vertex1;
+//        end = vertex2;
+//    }
+
     Vertex start, end;
     ColorDbl color;
     Triangle* endTriangle;
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
 
+
+};
+
+//KAOS
+struct Intersections{
+    Vertex pos;
+    //och sluttriangel
 };
 
 struct Triangle {
@@ -123,6 +137,11 @@ struct Triangle {
         P = glm::cross(D, E_2);
         Q = glm::cross(T, E_1);
         glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
+
+        //KAOS
+        std::list<Intersections> IntersectionsTmp = {};
+        Intersections inter;
+
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
             /*if(rand() % 100 > 98){
                 cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
@@ -132,6 +151,11 @@ struct Triangle {
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->color;
+
+                //KAOS
+                inter.pos = Vertex(tuv);
+                IntersectionsTmp.push_back(inter);
+
             }
             return true;
         } else {
@@ -140,6 +164,7 @@ struct Triangle {
     }
 
 };
+
 
 struct Tetrahedron {
     ColorDbl color;
@@ -165,6 +190,7 @@ struct Tetrahedron {
             if(tri.rayIntersection(intersectingRay)){
                 intersectingRay.color = color;
                 collision = true;
+
             }
         }
         return collision;
@@ -190,8 +216,30 @@ struct Scene {
             if(triangles[i].rayIntersection(intersectingRay)){break;}
         }
         //tetras[0].rayIntersection(intersectingRay);
+
     }
 };
+
+//KAOS
+//    glm::vec3 CastShadowRay(Scene scen, glm::vec3 hitSurface, glm::vec3 lightSource){
+//
+//        Vertex startingPoint = Vertex(hitSurface);
+//        Vertex lightPoint = lightSource;
+//        Ray ShadowRay = Ray(startingPoint, lightPoint);
+//
+//        //skicka shadow ray
+//        scen.rayIntersection(ShadowRay);
+//        //lägg in värden i en lista
+//        //list<Ray> intersections =
+//
+//
+//
+//
+//        double distanceLight = glm::distance(hitSurface, lightSource);
+//        double distanceIntersection;
+//    }
+
+
 struct Pixel{
     Pixel() : color(ColorDbl{}){}
     Pixel(ColorDbl rgb) : color(rgb){}
@@ -218,6 +266,13 @@ struct Camera{
         else{return rightEye;}
     }
 };
+
+struct LightSource{
+    glm::vec3 position;
+    ColorDbl color;
+    LightSource(): position(glm::vec3{}), color(glm::vec3{}){}
+};
+
 
 void createScene(Scene *world){
 
@@ -312,6 +367,11 @@ void createScene(Scene *world){
                                    vec3(2,2,0),
                                    vec3(1,0,-4),
                                    ColorDbl(0,150,0));*/
+
+
+    //Add point light
+    LightSource().color = glm::vec3{1.0,1.0,1.0};
+    LightSource().position = glm::vec3{5.0,5.0,5.0};
 
 }
 
