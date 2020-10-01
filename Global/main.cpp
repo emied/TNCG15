@@ -213,7 +213,7 @@ struct Scene {
         for(int i = 0; i < 24 ;i++){
             if(triangles[i].rayIntersection(intersectingRay)){break;}
         }
-        //tetras[0].rayIntersection(intersectingRay);
+        tetras.rayIntersection(intersectingRay);
 
     }
 };
