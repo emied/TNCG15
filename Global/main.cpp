@@ -13,7 +13,7 @@ struct ColorDbl{
     double r, g, b;
     ColorDbl(): r(0.0), g(0.0), b(0.0) {} //default constructor
     ColorDbl(double red, double green, double blue) : r(red), g(green), b(blue){}
-    ColorDbl(glm::vec3 color)
+    ColorDbl(vec3 color)
     {
       r = color.x;
       g = color.y;
@@ -58,16 +58,16 @@ Stream & operator<<(Stream & out, image const& img){
 }
 
 struct Vertex {
-    glm::vec4 position;
-    Vertex():position(glm::vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
-    Vertex(double x, double y, double z, double w) : position(glm::vec4(x, y, z, w)){}
-    Vertex(double x, double y, double z) : position(glm::vec4(x, y, z, 1.0)){}
-    Vertex(glm::vec3 in): position(in, 1.0){}
+    vec4 position;
+    Vertex():position(vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
+    Vertex(double x, double y, double z, double w) : position(vec4(x, y, z, w)){}
+    Vertex(double x, double y, double z) : position(vec4(x, y, z, 1.0)){}
+    Vertex(vec3 in): position(in, 1.0){}
 };
 
 struct Direction {
-    glm::vec3 direction;
-    Direction(): direction(glm::vec3{}){}
+    vec3 direction;
+    Direction(): direction(vec3{}){}
     Direction(Vertex in) : direction(in.position){}
 
 };
@@ -76,10 +76,11 @@ struct Triangle;
 
 struct Ray {
     //KAOS
-//    Ray(Vertex vertex1, Vertex vertex2) {
-//        start = vertex1;
-//        end = vertex2;
-//    }
+    Ray() : start{}, end{} {}
+    Ray(Vertex vertex1, Vertex vertex2) {
+        start = vertex1;
+        end = vertex2;
+    }
 
     Vertex start, end;
     ColorDbl color;
@@ -99,18 +100,18 @@ struct Triangle {
 
     ColorDbl color;
     Vertex vec0, vec1, vec2;
-    glm::vec3 normal{};
+    vec3 normal{};
     double d{};
 
 
-    Triangle() : Triangle(Vertex(glm::vec3{}),Vertex(glm::vec3{}),Vertex(glm::vec3{})){}
+    Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
 
     Triangle(Vertex v1, Vertex v2, Vertex v3){
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
-        normal = glm::cross((glm::vec3)(v2.position-v1.position),(glm::vec3)(v3.position-v1.position));
-        d = glm::dot(normal, (glm::vec3)vec0.position);
+        normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
+        d = dot(normal, (vec3)vec0.position);
         color = ColorDbl();
     }
 
@@ -118,8 +119,8 @@ struct Triangle {
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
-        normal = glm::cross((glm::vec3)(v2.position-v1.position),(glm::vec3)(v3.position-v1.position));
-        d = glm::dot(normal, (glm::vec3)vec0.position);
+        normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
+        d = dot(normal, (vec3)vec0.position);
         color = ColorDbl();
         if(dot(normal, (vec3)v4.position) > 0){
             normal = -normal;
@@ -129,14 +130,14 @@ struct Triangle {
 
     bool rayIntersection(Ray& intersectingRay) {
         //Möller-Trumbore
-        glm::vec3 T, E_1, E_2, D, P, Q;
-        T = (glm::vec3) (intersectingRay.start.position - vec0.position);
-        E_1 = (glm::vec3) (vec1.position - vec0.position);
-        E_2 = (glm::vec3) (vec2.position - vec0.position);
+        vec3 T, E_1, E_2, D, P, Q;
+        T = (vec3) (intersectingRay.start.position - vec0.position);
+        E_1 = (vec3) (vec1.position - vec0.position);
+        E_2 = (vec3) (vec2.position - vec0.position);
         D = intersectingRay.end.position - intersectingRay.start.position;
-        P = glm::cross(D, E_2);
-        Q = glm::cross(T, E_1);
-        glm::vec3 tuv = glm::vec3(glm::dot(Q, E_2), glm::dot(P, T), glm::dot(Q, D)) / glm::dot(P, E_1);
+        P = cross(D, E_2);
+        Q = cross(T, E_1);
+        vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
         //KAOS
         std::list<Intersections> IntersectionsTmp = {};
@@ -176,10 +177,7 @@ struct Tetrahedron {
     }
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
         color = c;
-        triangles[0] = Triangle(v1, v2, v3, v4);
-        triangles[1] = Triangle(v1, v2, v4, v3);
-        triangles[2] = Triangle(v1, v3, v4, v2);
-        triangles[3] = Triangle(v2, v3, v4, v1);
+        triangles = {Triangle(v1, v2, v3, v4), Triangle(v1, v2, v4, v3), Triangle(v1, v3, v4, v2), Triangle(v2, v3, v4, v1)};
     }
 
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
@@ -206,9 +204,9 @@ struct Scene {
     Tetrahedron tetras{};
     //Vertex vertices[14];
     ColorDbl colors[8];
-    Scene(){
-        createScene(this);
-    }
+    Scene() = default;//{
+        //createScene(this);
+    //}
 
 
     void rayIntersection(Ray& intersectingRay){
@@ -221,7 +219,7 @@ struct Scene {
 };
 
 //KAOS
-//    glm::vec3 CastShadowRay(Scene scen, glm::vec3 hitSurface, glm::vec3 lightSource){
+//    vec3 CastShadowRay(Scene scen, vec3 hitSurface, vec3 lightSource){
 //
 //        Vertex startingPoint = Vertex(hitSurface);
 //        Vertex lightPoint = lightSource;
@@ -235,7 +233,7 @@ struct Scene {
 //
 //
 //
-//        double distanceLight = glm::distance(hitSurface, lightSource);
+//        double distanceLight = distance(hitSurface, lightSource);
 //        double distanceIntersection;
 //    }
 
@@ -268,9 +266,9 @@ struct Camera{
 };
 
 struct LightSource{
-    glm::vec3 position;
+    vec3 position;
     ColorDbl color;
-    LightSource(): position(glm::vec3{}), color(glm::vec3{}){}
+    LightSource(): position(vec3{}), color(vec3{}){}
 };
 
 
@@ -298,6 +296,7 @@ void createScene(Scene *world){
     mt19937  gen(rd());
     uniform_int_distribution<> distrib(50,200);
     int val = distrib ( gen);
+    cout << "Grey value: " << val << endl;
     world->colors[0] = ColorDbl(val,val,val);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
     world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
@@ -362,16 +361,16 @@ void createScene(Scene *world){
     Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
     Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
     //create Tetrahedron
-    /*world->tetras = Tetrahedron(vec3(0,0,0),
+    world->tetras = Tetrahedron(vec3(0,0,0),
                                    vec3(2,-2,0),
                                    vec3(2,2,0),
                                    vec3(1,0,-4),
-                                   ColorDbl(0,150,0));*/
+                                   ColorDbl(0,150,0));
 
 
     //Add point light
-    LightSource().color = glm::vec3{1.0,1.0,1.0};
-    LightSource().position = glm::vec3{5.0,5.0,5.0};
+    LightSource().color = vec3{1.0,1.0,1.0};
+    LightSource().position = vec3{5.0,5.0,5.0};
 
 }
 
@@ -381,6 +380,7 @@ int main() {
     const int xWidth = 1920;
     const int yWidth = 1080;
 
+
     Scene world;
     const int width = 800;
     const int height = 800;
@@ -388,9 +388,9 @@ int main() {
     Camera cam{Vertex(-2,0,0), Vertex(-1,0,0), width, height};
     cam.setPerspective(false);
 
-
     image img{width,height};
 
+    cout << "Creating Scene" << endl;
     createScene(&world);
     double maxIntensity = 0;
     double dy = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
