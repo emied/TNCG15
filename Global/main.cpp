@@ -177,6 +177,7 @@ struct Tetrahedron {
     }
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
         color = c;
+        ColorDbl c1,c2,c3,c4;
         triangles = {Triangle(v1, v2, v3, v4), Triangle(v1, v2, v4, v3), Triangle(v1, v3, v4, v2), Triangle(v2, v3, v4, v1)};
     }
 
@@ -361,10 +362,10 @@ void createScene(Scene *world){
     Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
     Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
     //create Tetrahedron
-    world->tetras = Tetrahedron(vec3(0,0,0),
-                                   vec3(2,-2,0),
-                                   vec3(2,2,0),
-                                   vec3(1,0,-4),
+    world->tetras = Tetrahedron(vec3(8,0,2),
+                                   vec3(7,0,-3),
+                                   vec3(9,3,-1),
+                                   vec3(9,-2,-1),
                                    ColorDbl(0,150,0));
 
 
