@@ -355,18 +355,12 @@ void createScene(Scene *world){
             world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
         }
     }
-
-    //Vertex points for Tetrahedron
-    Vertex vrtx14 = Vertex(0.0, 0.0, 0.0, 1.0);
-    Vertex vrtx15 = Vertex(2.0, -2.0, 0.0, 1.0);
-    Vertex vrtx16 = Vertex(2.0, 2.0, 0.0, 1.0);
-    Vertex vrtx17 = Vertex(1.0, 0.0, -4.0, 1.0);
     //create Tetrahedron
     world->tetras = Tetrahedron(vec3(8,0,2),
-                                   vec3(7,0,-3),
-                                   vec3(9,3,-1),
-                                   vec3(9,-2,-1),
-                                   ColorDbl(0,150,0));
+                                vec3(7,0,-3),
+                                vec3(9,3,-1),
+                                vec3(9,-2,-1),
+                                ColorDbl(0,150,0));
 
 
     //Add point light
@@ -394,12 +388,15 @@ int main() {
     cout << "Creating Scene" << endl;
     createScene(&world);
     double maxIntensity = 0;
-    double dy = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
-    double dz = 0.5;            //Random values, chosen by creator. Guaranteed to be random.
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<> distrib(0,1.0);
     for(int i = 0; i < width; i++){
         for(int j = 0; j < height; j++){
             cam.image[i*width+j] = ColorDbl(100,100,100);
             Ray current{};
+            double dy = distrib(gen);
+            double dz = distrib(gen);
             current.start = cam.getEye();
             current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
             world.rayIntersection(current);
