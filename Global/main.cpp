@@ -408,7 +408,8 @@ int main() {
 
 
     Scene world;
-    const int raysPerPixel = 4;             //Select Anti-Aliasing HERE suggested values: 1,4,9
+    const int raysPerPixel = 1;             //Select Anti-Aliasing HERE suggested values: 1,4,9
+    const int subPixelsPerAxis = sqrt(raysPerPixel);        //UNUSED so far
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
@@ -440,7 +441,7 @@ int main() {
                 double dy = distrib(gen);
                 double dz = distrib(gen);
                 current.start = cam.getEye();
-                current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz) * pixelSize);
+                current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz ) * pixelSize);
                 world.rayIntersection(current);
                 pixelAvg += current.color;
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
