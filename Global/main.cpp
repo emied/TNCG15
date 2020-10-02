@@ -426,13 +426,13 @@ int main() {
     uniform_real_distribution<> distrib(0, 1.0);
 
     for (int i = 0; i < width; i++) {
+        double random = distrib(gen);
+        if(random > 0.95){
+            double progress = (double)(i*width)/(width*height);
+            int progressPercent = progress*100;
+            cout << "Rendering ..." << progressPercent << "%." << endl;
+        }
         for (int j = 0; j < height; j++) {
-            double random = distrib(gen);
-            if(random > 0.9999){
-                double progress = (double)(i*width+j)/(width*height);
-                int progressPercent = progress*100;
-                cout << "Rendering ..." << progressPercent << "%." << endl;
-            }
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
