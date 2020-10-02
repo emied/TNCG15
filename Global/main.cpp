@@ -408,7 +408,7 @@ int main() {
 
 
     Scene world;
-    const int raysPerPixel = 1;             //Select Anti-Aliasing HERE suggested values: 1,4,9
+    const int raysPerPixel = 4;             //Select Anti-Aliasing HERE suggested values: 1,4,9
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
@@ -458,8 +458,7 @@ int main() {
     cout << "Generated an image!" << endl;
     string filename;
     if (raysPerPixel>1) {
-        filename = "Scene_aa_" + raysPerPixel;
-        filename += ".bmp";
+        filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
     } else {
         filename = "Scene.bmp";
     }
