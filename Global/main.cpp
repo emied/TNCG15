@@ -427,6 +427,12 @@ int main() {
 
     for (int i = 0; i < width; i++) {
         for (int j = 0; j < height; j++) {
+            double random = distrib(gen);
+            if(random > 0.9999){
+                double progress = (double)(i*width+j)/(width*height);
+                int progressPercent = progress*100;
+                cout << "Rendering ..." << progressPercent << "%." << endl;
+            }
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
@@ -445,6 +451,7 @@ int main() {
             cam.image[i * width + j] = Pixel(pixelAvg);
         }
     }
+    cout << "Rendering ...100%" << endl;
 
     //write cam.image to output img
     for (int i = 0; i < height; i++) {
