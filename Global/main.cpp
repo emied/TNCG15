@@ -4,6 +4,7 @@
 #include <fstream>
 #include <random>
 #include <list>
+#include <string>
 
 using namespace std;
 using namespace glm;
@@ -18,6 +19,27 @@ struct ColorDbl{
       r = color.x;
       g = color.y;
       b = color.z;
+    }
+
+    ColorDbl& operator+=(ColorDbl const& other){
+        r += other.r;
+        g += other.g;
+        b += other.b;
+        return *this;
+    }
+
+    ColorDbl& operator/=(ColorDbl const& other){
+        r /= other.r;
+        g /= other.g;
+        b /= other.b;
+        return *this;
+    }
+
+    ColorDbl& operator/=(int val){
+        r /= (double) val;
+        g /= (double) val;
+        b /= (double) val;
+        return *this;
     }
 };
 
@@ -205,6 +227,7 @@ struct Scene {
     Tetrahedron tetras{};
     //Vertex vertices[14];
     ColorDbl colors[8];
+    bool randomRoof;
     Scene() = default;//{
         //createScene(this);
     //}
@@ -216,6 +239,10 @@ struct Scene {
         }
         tetras.rayIntersection(intersectingRay);
 
+    }
+
+    void setRandomRoof(bool b) {
+        randomRoof = b;
     }
 };
 
@@ -264,6 +291,7 @@ struct Camera{
         if(perspective){return leftEye;}
         else{return rightEye;}
     }
+
 };
 
 struct LightSource{
@@ -296,7 +324,10 @@ void createScene(Scene *world){
     random_device rd;
     mt19937  gen(rd());
     uniform_int_distribution<> distrib(50,200);
-    int val = distrib ( gen);
+    int val = 50;
+    if(world->randomRoof){
+        val = distrib ( gen);
+    }
     cout << "Grey value: " << val << endl;
     world->colors[0] = ColorDbl(val,val,val);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
@@ -377,48 +408,63 @@ int main() {
 
 
     Scene world;
+    const int raysPerPixel = 1;             //Select Anti-Aliasing HERE suggested values: 1,4,9
     const int width = 800;
     const int height = 800;
-    const double pixelSize = 2.0/width;
-    Camera cam{Vertex(-2,0,0), Vertex(-1,0,0), width, height};
+    const double pixelSize = 2.0 / width;
+    Camera cam{Vertex(-2, 0, 0), Vertex(-1, 0, 0), width, height};
     cam.setPerspective(false);
+    world.setRandomRoof(true);      //Use this to select if roof color randoms between runs.
 
-    image img{width,height};
+    image img{width, height};
 
     cout << "Creating Scene" << endl;
     createScene(&world);
     double maxIntensity = 0;
     random_device rd;
     mt19937 gen(rd());
-    uniform_real_distribution<> distrib(0,1.0);
-    for(int i = 0; i < width; i++){
-        for(int j = 0; j < height; j++){
-            cam.image[i*width+j] = ColorDbl(100,100,100);
-            Ray current{};
-            double dy = distrib(gen);
-            double dz = distrib(gen);
-            current.start = cam.getEye();
-            current.end = Vertex(0,(i-401 + dy)*pixelSize,(j-401 + dz)*pixelSize);
-            world.rayIntersection(current);
-            cam.image[i*width+j] = Pixel(current.color);
-            if(current.color.r > maxIntensity){maxIntensity = current.color.r;}
-            if(current.color.g > maxIntensity){maxIntensity = current.color.g;}
-            if(current.color.b > maxIntensity){maxIntensity = current.color.b;}
+    uniform_real_distribution<> distrib(0, 1.0);
+
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            cam.image[i * width + j] = ColorDbl(100, 100, 100);
+            ColorDbl pixelAvg{};
+            for (int r = 0; r < raysPerPixel; r++) {
+                Ray current{};
+                double dy = distrib(gen);
+                double dz = distrib(gen);
+                current.start = cam.getEye();
+                current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz) * pixelSize);
+                world.rayIntersection(current);
+                pixelAvg += current.color;
+                if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
+                if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
+                if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
+            }
+            pixelAvg /= raysPerPixel;
+            cam.image[i * width + j] = Pixel(pixelAvg);
         }
     }
 
     //write cam.image to output img
-    for(int i = 0; i < height; i++){
-        for(int j = 0; j < width; j++){
-            img.r(i,j) = cam.image[(height-1-i)*width+j].color.r;
-            img.g(i,j) = cam.image[(height-1-i)*width+j].color.g;
-            img.b(i,j) = cam.image[(height-1-i)*width+j].color.b;
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            img.r(i, j) = cam.image[(height - 1 - i) * width + j].color.r;
+            img.g(i, j) = cam.image[(height - 1 - i) * width + j].color.g;
+            img.b(i, j) = cam.image[(height - 1 - i) * width + j].color.b;
         }
     }
 
-     cout << "Generated an image!" << endl;
-     ofstream("generated.bmp", ios_base::out | ios_base::binary) << img;
-     cout << "Wrote file generated.bmp" << endl;
+    cout << "Generated an image!" << endl;
+    string filename;
+    if (raysPerPixel>1) {
+        filename = "Scene_aa_" + raysPerPixel;
+        filename += ".bmp";
+    } else {
+        filename = "Scene.bmp";
+    }
+    ofstream(filename, ios_base::out | ios_base::binary) << img;
+    cout << "Wrote file " << filename << endl;
 
     return 0;
 }
