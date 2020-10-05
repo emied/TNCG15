@@ -28,6 +28,13 @@ struct ColorDbl{
         return *this;
     }
 
+    ColorDbl& operator*(ColorDbl const& other){
+        r *= other.r;
+        g *= other.g;
+        b *= other.b;
+        return *this;
+    }
+
     ColorDbl& operator/=(ColorDbl const& other){
         r /= other.r;
         g /= other.g;
@@ -97,7 +104,6 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
-    //KAOS
     Ray() : start{}, end{} {}
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
@@ -112,11 +118,6 @@ struct Ray {
 
 };
 
-//KAOS
-struct Intersections{
-    Vertex pos;
-    //och sluttriangel
-};
 
 struct Triangle {
 
@@ -161,9 +162,6 @@ struct Triangle {
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
-        //KAOS
-        std::list<Intersections> IntersectionsTmp = {};
-        Intersections inter;
 
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
             /*if(rand() % 100 > 98){
@@ -174,10 +172,6 @@ struct Triangle {
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->color;
-
-                //KAOS
-                inter.pos = Vertex(tuv);
-                IntersectionsTmp.push_back(inter);
 
             }
             return true;
@@ -244,26 +238,69 @@ struct Scene {
     void setRandomRoof(bool b) {
         randomRoof = b;
     }
+
+
+    //Create List with intersections
+    list<Ray> intersections (Ray R)
+    {
+        list<Ray> intersectionsTmp = {};
+
+        for (int i = 0; i < 24 ;i++){ //fixa till alla trianglar, inte bara 24
+
+            Ray tempIntersectRay;
+
+            if(triangles[i].rayIntersection(R) == true)
+            {
+                tempIntersectRay.start = tempIntersectRay.start;
+                tempIntersectRay.end = tempIntersectRay.end; //+ 0.0001*norm eventuellt
+                tempIntersectRay.endTriangle = tempIntersectRay.endTriangle;
+
+                intersectionsTmp.push_back(tempIntersectRay);
+
+            }
+        }
+        return intersectionsTmp;
+    }
+
+
 };
 
 //KAOS
-//    vec3 CastShadowRay(Scene scen, vec3 hitSurface, vec3 lightSource){
-//
-//        Vertex startingPoint = Vertex(hitSurface);
-//        Vertex lightPoint = lightSource;
-//        Ray ShadowRay = Ray(startingPoint, lightPoint);
-//
-//        //skicka shadow ray
-//        scen.rayIntersection(ShadowRay);
-//        //lägg in värden i en lista
-//        //list<Ray> intersections =
-//
-//
-//
-//
-//        double distanceLight = distance(hitSurface, lightSource);
-//        double distanceIntersection;
-//    }
+    vec3 CastShadowRay(Scene scen, vec3 hitSurface, vec3 lightSource){
+
+        Vertex startingPoint = Vertex(hitSurface);
+        Vertex lightPoint = lightSource;
+        Ray ShadowRay = Ray(startingPoint, lightPoint);
+        glm::vec3 addToColor(1.0,1.0,1.0);
+
+        //skicka shadow ray
+        //lägg in värden i en lista
+        list<Ray> triIntersect = scen.intersections(ShadowRay);
+
+        glm::vec3 movedLight = glm::vec3(-lightSource.x+0.5, lightSource.y, lightSource.z);
+
+    // I ray finns: Vertex start, end; ta de för intersections
+
+        double distanceLight = glm::distance(hitSurface, movedLight);
+
+        for (auto& tmp : triIntersect)
+        {
+            double distanceIntersection  = glm::distance(hitSurface, vec3(tmp.end.position.x,tmp.end.position.y,tmp.end.position.z));
+
+         //debug
+         //   cout << "distanceLight " << distanceLight << " " << endl;
+         //   cout << "distanceIntersection " << distanceIntersection << " " << endl;
+
+            if (distanceIntersection < distanceLight && triIntersect.size() > 2) {
+                addToColor = (glm::vec3(0, 0, 0));
+               // debug, skugga eller ej
+               // cout << "YAAS  " << endl;
+            }
+
+        }
+
+        return addToColor;
+    }
 
 
 struct Pixel{
@@ -395,10 +432,11 @@ void createScene(Scene *world){
 
 
     //Add point light
-    LightSource().color = vec3{1.0,1.0,1.0};
+    LightSource().color = vec3{4.0,1.0,0.0};
     LightSource().position = vec3{5.0,5.0,5.0};
 
 }
+
 
 
 int main() {
@@ -443,7 +481,11 @@ int main() {
                 current.start = cam.getEye();
                 current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz ) * pixelSize);
                 world.rayIntersection(current);
-                pixelAvg += current.color;
+
+                //KAOS
+                ColorDbl shadowOrNot = CastShadowRay(world, vec3(current.intersectionPoint.position.x,current.intersectionPoint.position.y, current.intersectionPoint.position.z),LightSource().position);//end eller interection point eller ??????
+                pixelAvg += (current.color * shadowOrNot);
+
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
                 if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
