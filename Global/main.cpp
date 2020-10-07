@@ -34,6 +34,12 @@ struct ColorDbl{
         b *= other.b;
         return *this;
     }
+    ColorDbl& operator*=(ColorDbl const& other){
+        r *= other.r;
+        g *= other.g;
+        b *= other.b;
+        return *this;
+    }
 
     ColorDbl& operator/=(ColorDbl const& other){
         r /= other.r;
@@ -88,15 +94,43 @@ Stream & operator<<(Stream & out, image const& img){
 
 struct Vertex {
     vec4 position;
+    double x, y, z, w;
     Vertex():position(vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(vec4(x, y, z, w)){}
     Vertex(double x, double y, double z) : position(vec4(x, y, z, 1.0)){}
     Vertex(vec3 in): position(in, 1.0){}
+
+    Vertex& operator+=(Vertex const& other){
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        w += other.w;
+        return *this;
+    }
+
+    glm::vec3 operator- (Vertex const& obj) {
+        glm::vec3 res;
+        res.x = position.x - obj.position.x;
+        res.y = position.y - obj.position.y;
+        res.z = position.z - obj.position.z;
+        return res;
+    }
+
+    Vertex& operator*=(Vertex const& other){
+        x *= other.x;
+        y *= other.y;
+        z *= other.z;
+        w *= other.w;
+        return *this;
+    }
+
 };
 
 struct Direction {
-    vec3 direction;
-    Direction(): direction(vec3{}){}
+    glm::vec3 direction;
+    Direction(): direction(glm::vec3{}) {
+        direction = glm::vec3(0.0,0.0,0.0);
+    }
     Direction(Vertex in) : direction(in.position){}
 
 };
@@ -108,12 +142,21 @@ struct Ray {
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
         end = vertex2;
+        glm::vec3 test = glm::normalize(vertex2 - vertex1);
+        direction.direction = test;
+    }
+
+    Ray(Vertex startP, Direction dir )
+    {
+        start = startP;
+        direction = dir;
     }
 
     Vertex start, end;
     ColorDbl color;
     Triangle* endTriangle;
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
+    Direction direction;
 
 
 };
@@ -125,6 +168,8 @@ struct Triangle {
     Vertex vec0, vec1, vec2;
     vec3 normal{};
     double d{};
+    Vertex PointOfIntersection;
+    double Tout;
 
 
     Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
@@ -150,18 +195,17 @@ struct Triangle {
         }
     }
 
+    bool rayIntersection(Ray& intersectingRay, glm::vec3 point) {
 
-    bool rayIntersection(Ray& intersectingRay) {
-        //Möller-Trumbore
-        vec3 T, E_1, E_2, D, P, Q;
-        T = (vec3) (intersectingRay.start.position - vec0.position);
-        E_1 = (vec3) (vec1.position - vec0.position);
-        E_2 = (vec3) (vec2.position - vec0.position);
-        D = intersectingRay.end.position - intersectingRay.start.position;
-        P = cross(D, E_2);
-        Q = cross(T, E_1);
-        vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
-
+         //Möller-Trumbore
+         vec3 T, E_1, E_2, D, P, Q;
+         T = (vec3) (intersectingRay.start.position - vec0.position);
+         E_1 = (vec3) (vec1.position - vec0.position);
+         E_2 = (vec3) (vec2.position - vec0.position);
+         D = intersectingRay.end.position - intersectingRay.start.position;
+         P = cross(D, E_2);
+         Q = cross(T, E_1);
+         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
             /*if(rand() % 100 > 98){
@@ -172,14 +216,12 @@ struct Triangle {
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->color;
-
             }
             return true;
         } else {
             return false;
         }
     }
-
 };
 
 
@@ -201,8 +243,9 @@ struct Tetrahedron {
 
     bool rayIntersection(Ray& intersectingRay) {
         bool collision = false;
+        glm::vec3 tmp; // tmp är ny här och i ifen 2 rader under
         for(Triangle tri : triangles) {
-            if(tri.rayIntersection(intersectingRay)){
+            if(tri.rayIntersection(intersectingRay, tmp)){
                 intersectingRay.color = color;
                 collision = true;
 
@@ -210,6 +253,12 @@ struct Tetrahedron {
         }
         return collision;
     }
+};
+
+struct IntersectionPoint{
+    Triangle tri;
+    glm::vec3 PointTriangleIntersection;
+    float w;
 };
 
 struct Scene;
@@ -228,8 +277,9 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay){
+        glm::vec3 tmp;
         for(int i = 0; i < 24 ;i++){
-            if(triangles[i].rayIntersection(intersectingRay)){break;}
+            if(triangles[i].rayIntersection(intersectingRay, tmp)){break;}
         }
         tetras.rayIntersection(intersectingRay);
 
@@ -239,69 +289,73 @@ struct Scene {
         randomRoof = b;
     }
 
-
+    //EMIL
     //Create List with intersections
-    list<Ray> intersections (Ray R)
-    {
-        list<Ray> intersectionsTmp = {};
+    list<IntersectionPoint> intersections (Ray R) {
+        list<IntersectionPoint> intersectionsTmp;
 
-        for (int i = 0; i < 24 ;i++){ //fixa till alla trianglar, inte bara 24
+        for (Triangle tri : triangles) {
+            glm::vec3 point;
+            IntersectionPoint tempIntersected;
 
-            Ray tempIntersectRay;
+            if (tri.rayIntersection(R, point) == true) {
 
-            if(triangles[i].rayIntersection(R) == true)
-            {
-                tempIntersectRay.start = tempIntersectRay.start;
-                tempIntersectRay.end = tempIntersectRay.end; //+ 0.0001*norm eventuellt
-                tempIntersectRay.endTriangle = tempIntersectRay.endTriangle;
-
-                intersectionsTmp.push_back(tempIntersectRay);
-
+                tempIntersected.tri = tri;
+                tempIntersected.tri.PointOfIntersection.position = glm::vec4(point + tri.normal * (float) 0.005, 1);
+                tempIntersected.PointTriangleIntersection = point;
+                intersectionsTmp.push_back(tempIntersected);
             }
         }
+
+        for (int i = 0; i < tetras.triangles.size(); i++) {
+            glm::vec3 point;
+            IntersectionPoint tempIntersected2;
+
+            if (tetras.triangles[i].rayIntersection(R, point) == true) {
+                tempIntersected2.tri = tetras.triangles[i];
+                tempIntersected2.tri.PointOfIntersection.position = glm::vec4(point + tetras.triangles[i].normal * (float) 0.005, 1);
+                tempIntersected2.PointTriangleIntersection = point;
+                intersectionsTmp.push_back(tempIntersected2);
+            }
+        }
+        glm::vec3 startOfRay = R.start.position;
+
+        //EMIL
+        //Sortera intersections
+        intersectionsTmp.sort([&startOfRay](const auto &a, const auto &b) {
+            return glm::length(a.PointTriangleIntersection - startOfRay) > glm::length(b.PointTriangleIntersection - startOfRay);
+        });
         return intersectionsTmp;
     }
-
-
 };
 
-//KAOS
-    vec3 CastShadowRay(Scene scen, vec3 hitSurface, vec3 lightSource){
+//EMIL
+    glm::vec3 CastShadowRay(Scene scen, glm::vec3 hitSurface, glm::vec3 lightSource){
 
         Vertex startingPoint = Vertex(hitSurface);
         Vertex lightPoint = lightSource;
-        Ray ShadowRay = Ray(startingPoint, lightPoint);
+        Ray ShadowRay = Ray(startingPoint, lightPoint); // Ray från punkt till ljuskälla för att kika om något träffas på vägen
         glm::vec3 addToColor(1.0,1.0,1.0);
-
         //skicka shadow ray
         //lägg in värden i en lista
-        list<Ray> triIntersect = scen.intersections(ShadowRay);
+        list<IntersectionPoint> triIntersect = scen.intersections(ShadowRay);
+        glm::vec3 movedLight = glm::vec3(-lightSource.x+0.1, lightSource.y, lightSource.z);
 
-        glm::vec3 movedLight = glm::vec3(-lightSource.x+0.5, lightSource.y, lightSource.z);
-
-    // I ray finns: Vertex start, end; ta de för intersections
-
-        double distanceLight = glm::distance(hitSurface, movedLight);
+        double distanceLight = glm::distance(hitSurface, movedLight); //Ljuskällan till ytan
 
         for (auto& tmp : triIntersect)
         {
-            double distanceIntersection  = glm::distance(hitSurface, vec3(tmp.end.position.x,tmp.end.position.y,tmp.end.position.z));
 
-         //debug
-         //   cout << "distanceLight " << distanceLight << " " << endl;
-         //   cout << "distanceIntersection " << distanceIntersection << " " << endl;
+            double distanceIntersection  = glm::distance(hitSurface,tmp.PointTriangleIntersection); //ytan till intersection i objekt eller ljuskälla
+            //KAOS, distance blir oändlig många gånger!!!!
+            //cout << "distance intersection" << distanceIntersection << endl;
 
-            if (distanceIntersection < distanceLight && triIntersect.size() > 2) {
+            if (distanceIntersection < distanceLight && triIntersect.size() > 2) { //om (ytan till intersection < Ljuskällan till ytan) --> träff på obj--> skugga
                 addToColor = (glm::vec3(0, 0, 0));
-               // debug, skugga eller ej
-               // cout << "YAAS  " << endl;
             }
-
         }
-
         return addToColor;
     }
-
 
 struct Pixel{
     Pixel() : color(ColorDbl{}){}
@@ -430,11 +484,6 @@ void createScene(Scene *world){
                                 vec3(9,-2,-1),
                                 ColorDbl(0,150,0));
 
-
-    //Add point light
-    LightSource().color = vec3{4.0,1.0,0.0};
-    LightSource().position = vec3{5.0,5.0,5.0};
-
 }
 
 
@@ -464,6 +513,11 @@ int main() {
     mt19937 gen(rd());
     uniform_real_distribution<> distrib(0, 1.0);
 
+    //Add point light
+    LightSource light;
+    light.color = vec3{1.0,1.0,1.0};
+    light.position = vec3{3.0,-1.0,1.0};
+
     for (int i = 0; i < width; i++) {
         double random = distrib(gen);
         if(random > 0.95){
@@ -482,9 +536,14 @@ int main() {
                 current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz ) * pixelSize);
                 world.rayIntersection(current);
 
-                //KAOS
-                ColorDbl shadowOrNot = CastShadowRay(world, vec3(current.intersectionPoint.position.x,current.intersectionPoint.position.y, current.intersectionPoint.position.z),LightSource().position);//end eller interection point eller ??????
-                pixelAvg += (current.color * shadowOrNot);
+                //EMIL
+                glm::vec3 Point = current.end.position + vec4(current.direction.direction * 0.0001f, 1);
+                ColorDbl shadowOrNot = CastShadowRay(world,Point,light.position);
+
+                //bör multipliceras med shadowOrNot för att skuggorna ska skapas
+                pixelAvg += (current.color); //* shadowOrNot);
+                //KAOS, bör inte vara 0 hela tiden
+               //cout << "shadowOrNot  " D<< shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
 
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
