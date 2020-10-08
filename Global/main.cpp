@@ -71,11 +71,7 @@ Stream & operator<<(Stream & out, image const& img){
     for(int i=0; i<h ;i++){
         out.write(data + (3*w * i), 3 * w);
         out.write((char*)&pad, pad);
-    }/*
-    for(int i=h-1; i>=0;i--){
-        out.write(data + (3*w * i), 3 * w);
-        out.write((char*)&pad, pad);
-    }*/
+    }
     return out;
 }
 
@@ -408,8 +404,8 @@ int main() {
 
 
     Scene world;
-    const int raysPerPixel = 1;             //Select Anti-Aliasing HERE suggested values: 1,4,9
-    const int subPixelsPerAxis = sqrt(raysPerPixel);        //UNUSED so far
+    const int subPixelsPerAxis = 3;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
@@ -441,7 +437,9 @@ int main() {
                 double dy = distrib(gen);
                 double dz = distrib(gen);
                 current.start = cam.getEye();
-                current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz ) * pixelSize);
+                current.end = Vertex(0,
+                                     (i - 401 + r%subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
+                                     (j - 401 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
                 world.rayIntersection(current);
                 pixelAvg += current.color;
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
@@ -464,12 +462,7 @@ int main() {
     }
 
     cout << "Generated an image!" << endl;
-    string filename;
-    if (raysPerPixel>1) {
-        filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
-    } else {
-        filename = "Scene.bmp";
-    }
+    string filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
     ofstream(filename, ios_base::out | ios_base::binary) << img;
     cout << "Wrote file " << filename << endl;
 
