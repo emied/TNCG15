@@ -404,14 +404,14 @@ int main() {
 
 
     Scene world;
-    const int subPixelsPerAxis = 3;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int subPixelsPerAxis = 8;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
     const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
     Camera cam{Vertex(-2, 0, 0), Vertex(-1, 0, 0), width, height};
     cam.setPerspective(false);
-    world.setRandomRoof(true);      //Use this to select if roof color randoms between runs.
+    world.setRandomRoof(false);      //Use this to select if roof color randoms between runs.
 
     image img{width, height};
 
@@ -437,9 +437,18 @@ int main() {
                 double dy = distrib(gen);
                 double dz = distrib(gen);
                 current.start = cam.getEye();
+
                 current.end = Vertex(0,
-                                     (i - 401 + r%subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
-                                     (j - 401 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
+                                     (i - 400 + (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
+                                     (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
+                if(i == 402 && j == 401){
+                    cout << "R: " << r << ", y-offset: " << (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis << ", z-offset: " << floor(r/subPixelsPerAxis)/subPixelsPerAxis << ", ";
+                    cout << "dy: " << dy << ", dz: " << dz << ", ";
+                    cout << "y: " << current.end.position.y << ", z: " << current.end.position.z << endl;
+                }
+                if(abs(current.end.position.y) > 1.0 || abs(current.end.position.z) > 1.0 ){
+                    cout << "INCORRECT RAY COORDRINATE! Y: " << current.end.position.y << ", Z: " << current.end.position.z << endl;
+                }
                 world.rayIntersection(current);
                 pixelAvg += current.color;
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
