@@ -5,6 +5,7 @@
 #include <random>
 #include <list>
 #include <string>
+#include <ctime>
 
 using namespace std;
 using namespace glm;
@@ -235,15 +236,14 @@ struct Tetrahedron {
     }
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
         color = c;
-        ColorDbl c1,c2,c3,c4;
         triangles = {Triangle(v1, v2, v3, v4), Triangle(v1, v2, v4, v3), Triangle(v1, v3, v4, v2), Triangle(v2, v3, v4, v1)};
     }
 
-    Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
+    //Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
 
     bool rayIntersection(Ray& intersectingRay) {
         bool collision = false;
-        glm::vec3 tmp; // tmp är ny här och i ifen 2 rader under
+        glm::vec3 tmp{}; // tmp är ny här och i ifen 2 rader under
         for(Triangle tri : triangles) {
             if(tri.rayIntersection(intersectingRay, tmp)){
                 intersectingRay.color = color;
@@ -277,7 +277,7 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay){
-        glm::vec3 tmp;
+        glm::vec3 tmp{};
         for(int i = 0; i < 24 ;i++){
             if(triangles[i].rayIntersection(intersectingRay, tmp)){break;}
         }
@@ -295,7 +295,7 @@ struct Scene {
         list<IntersectionPoint> intersectionsTmp;
 
         for (Triangle tri : triangles) {
-            glm::vec3 point;
+            glm::vec3 point{};
             IntersectionPoint tempIntersected;
 
             if (tri.rayIntersection(R, point) == true) {
@@ -308,7 +308,7 @@ struct Scene {
         }
 
         for (int i = 0; i < tetras.triangles.size(); i++) {
-            glm::vec3 point;
+            glm::vec3 point{};
             IntersectionPoint tempIntersected2;
 
             if (tetras.triangles[i].rayIntersection(R, point) == true) {
@@ -495,8 +495,8 @@ int main() {
 
 
     Scene world;
-    const int raysPerPixel = 1;             //Select Anti-Aliasing HERE suggested values: 1,4,9
-    const int subPixelsPerAxis = sqrt(raysPerPixel);        //UNUSED so far
+    const int subPixelsPerAxis = 1;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
@@ -511,6 +511,7 @@ int main() {
     double maxIntensity = 0;
     random_device rd;
     mt19937 gen(rd());
+    time_t timer;
     uniform_real_distribution<> distrib(0, 1.0);
 
     //Add point light
@@ -518,6 +519,7 @@ int main() {
     light.color = vec3{1.0,1.0,1.0};
     light.position = vec3{3.0,-1.0,1.0};
 
+    double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
         double random = distrib(gen);
         if(random > 0.95){
@@ -533,7 +535,9 @@ int main() {
                 double dy = distrib(gen);
                 double dz = distrib(gen);
                 current.start = cam.getEye();
-                current.end = Vertex(0, (i - 401 + dy) * pixelSize, (j - 401 + dz ) * pixelSize);
+                current.end = Vertex(0,
+                                     (i - 400 + (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
+                                     (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
                 world.rayIntersection(current);
 
                 //EMIL
@@ -553,7 +557,8 @@ int main() {
             cam.image[i * width + j] = Pixel(pixelAvg);
         }
     }
-    cout << "Rendering ...100%" << endl;
+    seconds = time(&timer) - seconds;
+    cout << "Rendering ...100%" << ", rendering took " << seconds << " seconds." << endl;
 
     //write cam.image to output img
     for (int i = 0; i < height; i++) {
@@ -565,12 +570,7 @@ int main() {
     }
 
     cout << "Generated an image!" << endl;
-    string filename;
-    if (raysPerPixel>1) {
-        filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
-    } else {
-        filename = "Scene.bmp";
-    }
+    string filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
     ofstream(filename, ios_base::out | ios_base::binary) << img;
     cout << "Wrote file " << filename << endl;
 
