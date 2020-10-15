@@ -5,6 +5,7 @@
 #include <random>
 #include <list>
 #include <string>
+#include <time.h>
 
 using namespace std;
 using namespace glm;
@@ -16,9 +17,9 @@ struct ColorDbl{
     ColorDbl(double red, double green, double blue) : r(red), g(green), b(blue){}
     ColorDbl(vec3 color)
     {
-      r = color.x;
-      g = color.y;
-      b = color.z;
+        r = color.x;
+        g = color.y;
+        b = color.z;
     }
 
     ColorDbl& operator+=(ColorDbl const& other){
@@ -225,7 +226,7 @@ struct Scene {
     ColorDbl colors[8];
     bool randomRoof;
     Scene() = default;//{
-        //createScene(this);
+    //createScene(this);
     //}
 
 
@@ -404,7 +405,7 @@ int main() {
 
 
     Scene world;
-    const int subPixelsPerAxis = 8;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int subPixelsPerAxis = 1;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
     const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
@@ -418,10 +419,12 @@ int main() {
     cout << "Creating Scene" << endl;
     createScene(&world);
     double maxIntensity = 0;
+    time_t timer;
     random_device rd;
     mt19937 gen(rd());
     uniform_real_distribution<> distrib(0, 1.0);
-
+    timer = time(NULL);
+    double seconds = timer;
     for (int i = 0; i < width; i++) {
         double random = distrib(gen);
         if(random > 0.95){
@@ -441,11 +444,11 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                if(i == 402 && j == 401){
-                    cout << "R: " << r << ", y-offset: " << (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis << ", z-offset: " << floor(r/subPixelsPerAxis)/subPixelsPerAxis << ", ";
+                /*if(i == 400 && j == 400){
+                    cout << "R: " << r << ", y-offset: " << (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis << ", z-offset: " << floor((float)r/subPixelsPerAxis)/subPixelsPerAxis << ", ";
                     cout << "dy: " << dy << ", dz: " << dz << ", ";
                     cout << "y: " << current.end.position.y << ", z: " << current.end.position.z << endl;
-                }
+                }*/
                 if(abs(current.end.position.y) > 1.0 || abs(current.end.position.z) > 1.0 ){
                     cout << "INCORRECT RAY COORDRINATE! Y: " << current.end.position.y << ", Z: " << current.end.position.z << endl;
                 }
@@ -459,7 +462,8 @@ int main() {
             cam.image[i * width + j] = Pixel(pixelAvg);
         }
     }
-    cout << "Rendering ...100%" << endl;
+    seconds = time(&timer) - seconds;
+    cout << "Rendering ...100%" << ", rendering took " << seconds << " seconds." << endl;
 
     //write cam.image to output img
     for (int i = 0; i < height; i++) {
