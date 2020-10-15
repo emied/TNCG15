@@ -55,7 +55,22 @@ struct ColorDbl{
         b /= (double) val;
         return *this;
     }
+
+    ColorDbl& operator*=(float scalar){
+        r *= scalar;
+        g *= scalar;
+        b *= scalar;
+        return *this;
+    }
 };
+ColorDbl operator*(ColorDbl const& color, float scalar){
+    ColorDbl ret{};
+    ret.r = color.r*scalar;
+    ret.g = color.g*scalar;
+    ret.b = color.b*scalar;
+    return ret;
+}
+
 
 //Image generation from https://stackoverflow.com/a/62946358
 struct image{
@@ -263,17 +278,12 @@ struct IntersectionPoint{
 
 struct Scene;
 
-void createScene(Scene *world);
-
 struct Scene {
     Triangle triangles[24]{};
     Tetrahedron tetras{};
     //Vertex vertices[14];
-    ColorDbl colors[8];
     bool randomRoof;
-    Scene() = default;//{
-        //createScene(this);
-    //}
+    Scene() = default;
 
 
     void rayIntersection(Ray& intersectingRay){
@@ -330,7 +340,7 @@ struct Scene {
 };
 
 //EMIL
-    glm::vec3 CastShadowRay(Scene scen, glm::vec3 hitSurface, glm::vec3 lightSource){
+    glm::vec3 CastShadowRay(Scene scene, glm::vec3 hitSurface, glm::vec3 lightSource){
 
         Vertex startingPoint = Vertex(hitSurface);
         Vertex lightPoint = lightSource;
@@ -338,7 +348,7 @@ struct Scene {
         glm::vec3 addToColor(1.0,1.0,1.0);
         //skicka shadow ray
         //lägg in värden i en lista
-        list<IntersectionPoint> triIntersect = scen.intersections(ShadowRay);
+        list<IntersectionPoint> triIntersect = scene.intersections(ShadowRay);
         glm::vec3 movedLight = glm::vec3(-lightSource.x+0.1, lightSource.y, lightSource.z);
 
         double distanceLight = glm::distance(hitSurface, movedLight); //Ljuskällan till ytan
@@ -348,7 +358,13 @@ struct Scene {
 
             double distanceIntersection  = glm::distance(hitSurface,tmp.PointTriangleIntersection); //ytan till intersection i objekt eller ljuskälla
             //KAOS, distance blir oändlig många gånger!!!!
-            //cout << "distance intersection" << distanceIntersection << endl;
+            random_device rd;
+            mt19937 gen(rd());
+            uniform_real_distribution<> distrib(0, 1.0);
+            double random = distrib(gen);
+            if(random > 0.9999){
+                cout << "distance intersection " << distanceIntersection << endl;
+            }
 
             if (distanceIntersection < distanceLight && triIntersect.size() > 2) { //om (ytan till intersection < Ljuskällan till ytan) --> träff på obj--> skugga
                 addToColor = (glm::vec3(0, 0, 0));
@@ -391,9 +407,9 @@ struct LightSource{
     LightSource(): position(vec3{}), color(vec3{}){}
 };
 
-
 void createScene(Scene *world){
 
+    ColorDbl colors[8];
     //Vertex points r = roof, f = floor
     Vertex vrtx0r = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
     Vertex vrtx1r = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
@@ -420,7 +436,7 @@ void createScene(Scene *world){
         val = distrib ( gen);
     }
     cout << "Grey value: " << val << endl;
-    world->colors[0] = ColorDbl(val,val,val);
+    colors[0] = ColorDbl(val,val,val);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
     world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
     world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
@@ -429,7 +445,7 @@ void createScene(Scene *world){
     world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r);
 
     //Floor = White
-    world->colors[1] = ColorDbl(255,255,255);
+    colors[1] = ColorDbl(255,255,255);
     world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f);
     world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f);
     world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f);
@@ -440,41 +456,41 @@ void createScene(Scene *world){
 
     //Walls
     //Wall 1 = Red
-    world->colors[2] = ColorDbl(255,0,0);
-    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);// ska vara 2,1,8, blir dock knas då
+    colors[2] = ColorDbl(255,0,0);
+    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);
     world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f);
 
     //Wall 2 = Yellow
-    world->colors[3] = ColorDbl(255,255,0);
+    colors[3] = ColorDbl(255,255,0);
     world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
     world->triangles[15] = Triangle(vrtx2f, vrtx2r, vrtx3f);
 
     //Wall 3 = Green
-    world->colors[4] = ColorDbl(0,255,0);
+    colors[4] = ColorDbl(0,255,0);
     world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f);
     world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r);
 
     //Wall 4 = Teal
-    world->colors[5] = ColorDbl(0,255,255);
+    colors[5] = ColorDbl(0,255,255);
     world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f);
     world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f);
 
     //Wall 5 = Blue
-    world->colors[6] = ColorDbl(0,0,255);
+    colors[6] = ColorDbl(0,0,255);
     world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f);
     world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r);
 
     //Wall 6 = Purple
-    world->colors[7] = ColorDbl(255,0,255);
+    colors[7] = ColorDbl(255,0,255);
     world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
     world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
 
     //Actually assign colours
     for(int j = 0; j < 24; j++){
         if(j < 12) {
-            world->triangles[j].color = world->colors[j/6];
+            world->triangles[j].color = colors[j/6];
         } else {
-            world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
+            world->triangles[j].color = colors[(int)floor(j/2) - 4];
         }
     }
     //create Tetrahedron
@@ -483,6 +499,11 @@ void createScene(Scene *world){
                                 vec3(9,3,-1),
                                 vec3(9,-2,-1),
                                 ColorDbl(0,150,0));
+
+
+    //Add point light
+    LightSource().color = vec3{1.0,1.0,1.0};
+    LightSource().position = vec3{5.0,5.0,5.0};
 
 }
 
@@ -541,14 +562,15 @@ int main() {
                 world.rayIntersection(current);
 
                 //EMIL
-                glm::vec3 Point = current.end.position + vec4(current.direction.direction * 0.0001f, 1);
+                glm::vec3 Point = (vec3)current.end.position + vec3(current.direction.direction * 0.01f);
                 ColorDbl shadowOrNot = CastShadowRay(world,Point,light.position);
 
                 //bör multipliceras med shadowOrNot för att skuggorna ska skapas
-                pixelAvg += (current.color); //* shadowOrNot);
+                pixelAvg += (current.color) * shadowOrNot;
                 //KAOS, bör inte vara 0 hela tiden
-               //cout << "shadowOrNot  " D<< shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
-
+                if(random > 1) {
+                    cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
+                }
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
                 if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
