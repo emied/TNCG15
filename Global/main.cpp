@@ -568,7 +568,11 @@ int main() {
                 //bör multipliceras med shadowOrNot för att skuggorna ska skapas
                 pixelAvg += (current.color) * shadowOrNot;
                 //KAOS, bör inte vara 0 hela tiden
-                if(random > 1) {
+                random_device rd;
+                mt19937 gen(rd());
+                uniform_real_distribution<> distrib(0, 1.0);
+                double random = distrib(gen);
+                if(random > 0.9999){
                     cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
                 }
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
