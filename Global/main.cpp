@@ -5,7 +5,7 @@
 #include <random>
 #include <list>
 #include <string>
-#include <time.h>
+#include <ctime>
 
 using namespace std;
 using namespace glm;
@@ -42,7 +42,24 @@ struct ColorDbl{
         b /= (double) val;
         return *this;
     }
+
+    ColorDbl& operator*=(float scalar){
+        r *= scalar;
+        g *= scalar;
+        b *= scalar;
+        return *this;
+    }
+
+
 };
+
+ColorDbl operator*(ColorDbl const& color, float scalar){
+    ColorDbl ret{};
+    ret.r = color.r*scalar;
+    ret.g = color.g*scalar;
+    ret.b = color.b*scalar;
+    return ret;
+}
 
 //Image generation from https://stackoverflow.com/a/62946358
 struct image{
@@ -95,10 +112,11 @@ struct Triangle;
 
 struct Ray {
     //KAOS
-    Ray() : start{}, end{} {}
+    Ray() : start{}, end{} , endTriangle{nullptr} {}
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
         end = vertex2;
+        endTriangle = nullptr;
     }
 
     Vertex start, end;
@@ -163,14 +181,13 @@ struct Triangle {
         Intersections inter;
 
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
-            /*if(rand() % 100 > 98){
-                cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
-            }*/
             if(intersectingRay.intersectionPoint.position.x > tuv.x) {
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
-                intersectingRay.color = this->color;
+                //Calculate color
+
+                intersectingRay.color = this->color*0.5;
 
                 //KAOS
                 inter.pos = Vertex(tuv);
@@ -196,7 +213,6 @@ struct Tetrahedron {
     }
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
         color = c;
-        ColorDbl c1,c2,c3,c4;
         triangles = {Triangle(v1, v2, v3, v4), Triangle(v1, v2, v4, v3), Triangle(v1, v3, v4, v2), Triangle(v2, v3, v4, v1)};
     }
 
@@ -223,7 +239,6 @@ struct Scene {
     Triangle triangles[24]{};
     Tetrahedron tetras{};
     //Vertex vertices[14];
-    ColorDbl colors[8];
     bool randomRoof;
     Scene() = default;//{
     //createScene(this);
@@ -280,9 +295,6 @@ struct Camera{
         perspective = p;
     }
 
-    void togglePerspective(){
-        perspective = !perspective;
-    }
 
     Vertex getEye() {
         if(perspective){return leftEye;}
@@ -300,6 +312,7 @@ struct LightSource{
 
 void createScene(Scene *world){
 
+    ColorDbl colors[8];
     //Vertex points r = roof, f = floor
     Vertex vrtx0r = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
     Vertex vrtx1r = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
@@ -326,7 +339,7 @@ void createScene(Scene *world){
         val = distrib ( gen);
     }
     cout << "Grey value: " << val << endl;
-    world->colors[0] = ColorDbl(val,val,val);
+    colors[0] = ColorDbl(val,val,val);
     world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
     world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
     world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
@@ -335,7 +348,7 @@ void createScene(Scene *world){
     world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r);
 
     //Floor = White
-    world->colors[1] = ColorDbl(255,255,255);
+    colors[1] = ColorDbl(255,255,255);
     world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f);
     world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f);
     world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f);
@@ -346,41 +359,41 @@ void createScene(Scene *world){
 
     //Walls
     //Wall 1 = Red
-    world->colors[2] = ColorDbl(255,0,0);
-    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);// ska vara 2,1,8, blir dock knas då
+    colors[2] = ColorDbl(255,0,0);
+    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);
     world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f);
 
     //Wall 2 = Yellow
-    world->colors[3] = ColorDbl(255,255,0);
+    colors[3] = ColorDbl(255,255,0);
     world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
     world->triangles[15] = Triangle(vrtx2f, vrtx2r, vrtx3f);
 
     //Wall 3 = Green
-    world->colors[4] = ColorDbl(0,255,0);
+    colors[4] = ColorDbl(0,255,0);
     world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f);
     world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r);
 
     //Wall 4 = Teal
-    world->colors[5] = ColorDbl(0,255,255);
+    colors[5] = ColorDbl(0,255,255);
     world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f);
     world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f);
 
     //Wall 5 = Blue
-    world->colors[6] = ColorDbl(0,0,255);
+    colors[6] = ColorDbl(0,0,255);
     world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f);
     world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r);
 
     //Wall 6 = Purple
-    world->colors[7] = ColorDbl(255,0,255);
+    colors[7] = ColorDbl(255,0,255);
     world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
     world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
 
     //Actually assign colours
     for(int j = 0; j < 24; j++){
         if(j < 12) {
-            world->triangles[j].color = world->colors[j/6];
+            world->triangles[j].color = colors[j/6];
         } else {
-            world->triangles[j].color = world->colors[(int)floor(j/2) - 4];
+            world->triangles[j].color = colors[(int)floor(j/2) - 4];
         }
     }
     //create Tetrahedron
@@ -400,8 +413,8 @@ void createScene(Scene *world){
 
 int main() {
     cout << "This is the start of our RayTracer!" << endl;
-    const int xWidth = 1920;
-    const int yWidth = 1080;
+    //const int xWidth = 1920;
+    //const int yWidth = 1080;
 
 
     Scene world;
@@ -410,6 +423,7 @@ int main() {
     const int width = 800;
     const int height = 800;
     const double pixelSize = 2.0 / width;
+    const bool debugAA = false;
     Camera cam{Vertex(-2, 0, 0), Vertex(-1, 0, 0), width, height};
     cam.setPerspective(false);
     world.setRandomRoof(false);      //Use this to select if roof color randoms between runs.
@@ -423,8 +437,7 @@ int main() {
     random_device rd;
     mt19937 gen(rd());
     uniform_real_distribution<> distrib(0, 1.0);
-    timer = time(NULL);
-    double seconds = timer;
+    double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
         double random = distrib(gen);
         if(random > 0.95){
@@ -444,13 +457,13 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                /*if(i == 400 && j == 400){
+                /*if(i == 400 && j == 400 ){
                     cout << "R: " << r << ", y-offset: " << (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis << ", z-offset: " << floor((float)r/subPixelsPerAxis)/subPixelsPerAxis << ", ";
                     cout << "dy: " << dy << ", dz: " << dz << ", ";
                     cout << "y: " << current.end.position.y << ", z: " << current.end.position.z << endl;
                 }*/
                 if(abs(current.end.position.y) > 1.0 || abs(current.end.position.z) > 1.0 ){
-                    cout << "INCORRECT RAY COORDRINATE! Y: " << current.end.position.y << ", Z: " << current.end.position.z << endl;
+                    cout << "INCORRECT RAY COORDINATE! Y: " << current.end.position.y << ", Z: " << current.end.position.z << endl;
                 }
                 world.rayIntersection(current);
                 pixelAvg += current.color;
