@@ -275,13 +275,13 @@ struct Tetrahedron {
         return collision;
     }
 };
-
+/*
 struct IntersectionPoint{
     Triangle tri;
     glm::vec3 PointTriangleIntersection;
     float w;
 };
-
+*/
 struct Scene;
 
 struct Scene {
@@ -293,9 +293,9 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay, bool print = false){
-        glm::vec3 tmp{};
+        vec3 tmp{};
         for(int i = 0; i < 24 ;i++){
-            if(triangles[i].rayIntersection(intersectingRay, tmp, print)){break;}
+            if(triangles[i].rayIntersection(intersectingRay, tmp)){break;}
         }
         tetras.rayIntersection(intersectingRay);
 
@@ -307,7 +307,7 @@ struct Scene {
 
     //EMIL
     //Create List with intersections
-    list<IntersectionPoint> intersections (Ray R) {
+/*    list<IntersectionPoint> intersections (Ray R) {
         list<IntersectionPoint> intersectionsTmp;
 
         for (Triangle tri : triangles) {
@@ -343,8 +343,10 @@ struct Scene {
         });
         return intersectionsTmp;
     }
+    */
 };
 
+/*
 //EMIL
     glm::vec3 CastShadowRay(Scene scene, glm::vec3 hitSurface, glm::vec3 lightSource){
 
@@ -378,7 +380,7 @@ struct Scene {
         }
         return addToColor;
     }
-
+*/
 struct Pixel{
     Pixel() : color(ColorDbl{}){}
     Pixel(ColorDbl rgb) : color(rgb){}
@@ -500,10 +502,15 @@ void createScene(Scene *world){
         }
     }
     //create Tetrahedron
-    world->tetras = Tetrahedron(vec3(8,0,2),
+    /*world->tetras = Tetrahedron(vec3(8,0,2),
                                 vec3(7,0,-3),
                                 vec3(9,3,-1),
                                 vec3(9,-2,-1),
+                                ColorDbl(0,150,0));*/
+    world->tetras = Tetrahedron(vec3(6,0,-3),
+                                vec3(8,2,-3),
+                                vec3(8,-2,-3),
+                                vec3(7,0,0),
                                 ColorDbl(0,150,0));
 
 
@@ -544,7 +551,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{10.0,0.0,-2.0};
+    light.position = vec3{6.0,-2.0,1.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -575,7 +582,7 @@ int main() {
 
                 shadow.start = Vertex{(1-u-v)*(vec3)current.endTriangle->vec0.position + u*current.endTriangle->vec1.position + v*current.endTriangle->vec2.position};
                 //Move start out of object
-                shadow.start = (vec3)shadow.start.position + 0.01*current.endTriangle->normal;
+                shadow.start = (vec3)shadow.start.position + 1.1*(current.start - current.end);
                 shadow.end = light.position;
 
 
