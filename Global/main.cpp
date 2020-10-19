@@ -509,7 +509,7 @@ void createScene(Scene *world){
                                 ColorDbl(0,150,0));*/
     world->tetras = Tetrahedron(vec3(6,0,-3),
                                 vec3(8,2,-3),
-                                vec3(8,-2,-3),
+                                vec3(7.5,-2,-3),
                                 vec3(7,0,0),
                                 ColorDbl(0,150,0));
 
@@ -551,7 +551,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{6.0,-2.0,1.0};
+    light.position = vec3{8.0,0.0,-4.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -595,7 +595,7 @@ int main() {
 
 
                 //EMIL
-                glm::vec3 Point = (vec3)current.end.position + vec3(current.direction.direction * 0.01f);
+                //glm::vec3 Point = (vec3)current.end.position + vec3(current.direction.direction * 0.01f);
                 ColorDbl shadowOrNot = (shadedRay)?ColorDbl{}:ColorDbl{1.0,1.0,1.0};
 
                 //bör multipliceras med shadowOrNot för att skuggorna ska skapas
