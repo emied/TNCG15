@@ -297,7 +297,7 @@ struct Scene {
         for(int i = 0; i < 24 ;i++){
             if(triangles[i].rayIntersection(intersectingRay, tmp, print)){break;}
         }
-        //tetras.rayIntersection(intersectingRay);
+        tetras.rayIntersection(intersectingRay);
 
     }
 
@@ -596,12 +596,12 @@ int main() {
                 //KAOS, bör inte vara 0 hela tiden
                 if(random > 0.9999){
                     //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
-                    cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
+                    //cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
                     //cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
-                    cout << "Current triangle color: " << endl << "r: " << current.endTriangle->color.r <<
-                    ", g: " << current.endTriangle->color.g << ", b: " << current.endTriangle->color.b << endl;
-                    cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
-                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl;
+                    /*cout << "Current triangle color: " << endl << "r: " << current.endTriangle->color.r <<
+                    ", g: " << current.endTriangle->color.g << ", b: " << current.endTriangle->color.b << endl;*/
+                    /*cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
+                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl;*/
                 }
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
