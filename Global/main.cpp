@@ -217,7 +217,7 @@ struct Triangle {
         }
     }
 
-    bool rayIntersection(Ray& intersectingRay, glm::vec3 point, bool print = false) {
+    bool rayIntersection(Ray& intersectingRay, bool print = false, glm::vec3 point = vec3{}) {
 
          //Möller-Trumbore
          vec3 T, E_1, E_2, D, P, Q;
@@ -262,11 +262,11 @@ struct Tetrahedron {
 
     //Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
 
-    bool rayIntersection(Ray& intersectingRay) {
+    bool rayIntersection(Ray& intersectingRay, bool print = false) {
         bool collision = false;
         glm::vec3 tmp{}; // tmp är ny här och i ifen 2 rader under
         for(Triangle tri : triangles) {
-            if(tri.rayIntersection(intersectingRay, tmp)){
+            if(tri.rayIntersection(intersectingRay, print)){
                 intersectingRay.color = color;
                 collision = true;
 
@@ -293,11 +293,16 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay, bool print = false){
-        vec3 tmp{};
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<> distrib(0, 1.0);
+        double random = distrib(gen);
         for(int i = 0; i < 24 ;i++){
-            if(triangles[i].rayIntersection(intersectingRay, tmp)){break;}
+            random = distrib(gen);
+            if(triangles[i].rayIntersection(intersectingRay)){break;}
         }
-        tetras.rayIntersection(intersectingRay);
+        random = distrib(gen);
+        tetras.rayIntersection(intersectingRay, random > 0.9999);
 
     }
 
@@ -545,8 +550,8 @@ int main() {
     double maxIntensity = 0;
     random_device rd;
     mt19937 gen(rd());
-    time_t timer;
     uniform_real_distribution<> distrib(0, 1.0);
+    time_t timer;
 
     //Add point light
     LightSource light;
@@ -582,7 +587,7 @@ int main() {
 
                 shadow.start = Vertex{(1-u-v)*(vec3)current.endTriangle->vec0.position + u*current.endTriangle->vec1.position + v*current.endTriangle->vec2.position};
                 //Move start out of object
-                shadow.start = (vec3)shadow.start.position + 1.1*(current.start - current.end);
+                shadow.start = (vec3)shadow.start.position + 0.1*(current.start.position - current.end.position);
                 shadow.end = light.position;
 
 
