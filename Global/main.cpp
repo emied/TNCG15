@@ -71,6 +71,14 @@ ColorDbl operator*(ColorDbl const& color, float scalar){
     return ret;
 }
 
+vec3 operator* (double const& scalar,vec3 vector){
+    vec3 tmp;
+    tmp.x = scalar * vector.x;
+    tmp.y = scalar * vector.y;
+    tmp.z = scalar * vector.z;
+    return tmp;
+}
+
 
 //Image generation from https://stackoverflow.com/a/62946358
 struct image{
@@ -110,22 +118,21 @@ Stream & operator<<(Stream & out, image const& img){
 
 struct Vertex {
     vec4 position;
-    double x, y, z, w;
     Vertex():position(vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(vec4(x, y, z, w)){}
     Vertex(double x, double y, double z) : position(vec4(x, y, z, 1.0)){}
     Vertex(vec3 in): position(in, 1.0){}
 
     Vertex& operator+=(Vertex const& other){
-        x += other.x;
-        y += other.y;
-        z += other.z;
-        w += other.w;
+        position.x += other.position.x;
+        position.y += other.position.y;
+        position.z += other.position.z;
+        position.w += other.position.w;
         return *this;
     }
 
     glm::vec3 operator- (Vertex const& obj) {
-        glm::vec3 res;
+        vec3 res;
         res.x = position.x - obj.position.x;
         res.y = position.y - obj.position.y;
         res.z = position.z - obj.position.z;
@@ -133,10 +140,10 @@ struct Vertex {
     }
 
     Vertex& operator*=(Vertex const& other){
-        x *= other.x;
-        y *= other.y;
-        z *= other.z;
-        w *= other.w;
+        position.x *= other.position.x;
+        position.y *= other.position.y;
+        position.z *= other.position.z;
+        position.w *= other.position.w;
         return *this;
     }
 
@@ -193,7 +200,7 @@ struct Triangle {
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
-        normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
+        normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
         d = dot(normal, (vec3)vec0.position);
         color = ColorDbl();
     }
@@ -210,7 +217,7 @@ struct Triangle {
         }
     }
 
-    bool rayIntersection(Ray& intersectingRay, glm::vec3 point) {
+    bool rayIntersection(Ray& intersectingRay, glm::vec3 point, bool print = false) {
 
          //Möller-Trumbore
          vec3 T, E_1, E_2, D, P, Q;
@@ -223,11 +230,11 @@ struct Triangle {
          vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
-            /*if(rand() % 100 > 98){
-                cout << "Vector print; t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
-            }*/
             if(intersectingRay.intersectionPoint.position.x > tuv.x) {
                 //Update intersectingRay here
+                if(print){
+                    cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z << endl;
+                }
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->color;
@@ -285,12 +292,12 @@ struct Scene {
     Scene() = default;
 
 
-    void rayIntersection(Ray& intersectingRay){
+    void rayIntersection(Ray& intersectingRay, bool print = false){
         glm::vec3 tmp{};
         for(int i = 0; i < 24 ;i++){
-            if(triangles[i].rayIntersection(intersectingRay, tmp)){break;}
+            if(triangles[i].rayIntersection(intersectingRay, tmp, print)){break;}
         }
-        tetras.rayIntersection(intersectingRay);
+        //tetras.rayIntersection(intersectingRay);
 
     }
 
@@ -307,7 +314,7 @@ struct Scene {
             glm::vec3 point{};
             IntersectionPoint tempIntersected;
 
-            if (tri.rayIntersection(R, point) == true) {
+            if (tri.rayIntersection(R, point)) {
 
                 tempIntersected.tri = tri;
                 tempIntersected.tri.PointOfIntersection.position = glm::vec4(point + tri.normal * (float) 0.005, 1);
@@ -320,7 +327,7 @@ struct Scene {
             glm::vec3 point{};
             IntersectionPoint tempIntersected2;
 
-            if (tetras.triangles[i].rayIntersection(R, point) == true) {
+            if (tetras.triangles[i].rayIntersection(R, point)) {
                 tempIntersected2.tri = tetras.triangles[i];
                 tempIntersected2.tri.PointOfIntersection.position = glm::vec4(point + tetras.triangles[i].normal * (float) 0.005, 1);
                 tempIntersected2.PointTriangleIntersection = point;
@@ -462,7 +469,7 @@ void createScene(Scene *world){
     //Wall 2 = Yellow
     colors[3] = ColorDbl(255,255,0);
     world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
-    world->triangles[15] = Triangle(vrtx2f, vrtx2r, vrtx3f);
+    world->triangles[15] = Triangle(vrtx2f, vrtx3f, vrtx2r);
 
     //Wall 3 = Green
     colors[4] = ColorDbl(0,255,0);
@@ -537,7 +544,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{3.0,-1.0,1.0};
+    light.position = vec3{10.0,0.0,-2.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -555,24 +562,46 @@ int main() {
                 double dy = distrib(gen);
                 double dz = distrib(gen);
                 current.start = cam.getEye();
+
                 current.end = Vertex(0,
-                                     (i - 400 + (float)(r%subPixelsPerAxis)/(float)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
+                                     (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
                 world.rayIntersection(current);
 
+                Ray shadow{};
+                double u , v;
+                u = current.intersectionPoint.position.y;
+                v = current.intersectionPoint.position.z;
+
+                shadow.start = Vertex{(1-u-v)*(vec3)current.endTriangle->vec0.position + u*current.endTriangle->vec1.position + v*current.endTriangle->vec2.position};
+                //Move start out of object
+                shadow.start = (vec3)shadow.start.position + 0.01*current.endTriangle->normal;
+                shadow.end = light.position;
+
+
+                random = distrib(gen);
+                world.rayIntersection(shadow);
+                bool shadedRay = false;
+                if(shadow.intersectionPoint.position.x <= 1 && shadow.intersectionPoint.position.x >= 0){
+                    shadedRay = true;
+                }
+
+
                 //EMIL
                 glm::vec3 Point = (vec3)current.end.position + vec3(current.direction.direction * 0.01f);
-                ColorDbl shadowOrNot = CastShadowRay(world,Point,light.position);
+                ColorDbl shadowOrNot = (shadedRay)?ColorDbl{}:ColorDbl{1.0,1.0,1.0};
 
                 //bör multipliceras med shadowOrNot för att skuggorna ska skapas
                 pixelAvg += (current.color) * shadowOrNot;
                 //KAOS, bör inte vara 0 hela tiden
-                random_device rd;
-                mt19937 gen(rd());
-                uniform_real_distribution<> distrib(0, 1.0);
-                double random = distrib(gen);
                 if(random > 0.9999){
-                    cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
+                    //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
+                    cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
+                    //cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
+                    cout << "Current triangle color: " << endl << "r: " << current.endTriangle->color.r <<
+                    ", g: " << current.endTriangle->color.g << ", b: " << current.endTriangle->color.b << endl;
+                    cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
+                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl;
                 }
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
