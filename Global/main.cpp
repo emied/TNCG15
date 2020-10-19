@@ -158,8 +158,7 @@ struct Ray {
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
         end = vertex2;
-        glm::vec3 test = glm::normalize(vertex2 - vertex1);
-        direction.direction = test;
+        direction.direction = normalize(vertex2 - vertex1);
     }
 
     Ray(Vertex startP, Direction dir )
