@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace glm;
+long double EPSILON = 0.00000001;
 
 struct ColorDbl{
 
@@ -282,6 +283,71 @@ struct IntersectionPoint{
     float w;
 };
 */
+
+struct Sphere{
+
+    vec3 centerOfSphere;
+    double rad;
+    double t = 0.0;
+
+    Sphere(){}
+
+    Sphere(double radius, vec3 centerSphere){
+    centerOfSphere = centerSphere;
+    rad = radius;
+    }
+
+    //inspired by
+    //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
+    bool sphereRayIntersection(Ray& ray, double &t){
+
+        double r = rad;
+        vec3 direction = ray.direction.direction;
+        vec3 sphereCenter = centerOfSphere;
+        vec3 L = sphereCenter - direction;
+
+        double tca = dot((L*2.0f), direction);
+
+        if(tca < EPSILON) return false;
+
+        double tcaSquared = (tca*tca);
+        double radiusSquared = (r*r);
+        float d = dot(L,L) - tcaSquared;
+
+        if(radiusSquared < d) return false;
+
+        double thc = sqrt(radiusSquared-d);
+
+        double t0 = tca-thc;
+        double t1 = tca+thc;
+
+        if(t0 > t1) swap(t0,t1);
+
+        if(t0 < EPSILON){
+            t0 = t1;
+            if (t0 < EPSILON){
+                return false;
+            }
+        }
+
+        //hit
+        t = t0;
+        float f = (float) t;
+        vec3 collision = ray.start.position + vec4(direction*f,0.0);
+
+        return true;
+
+    }
+
+    vec3 getSphereNormal (Vertex middle){
+        return normalize(middle-centerOfSphere);
+    }
+
+};
+
+
+
+
 struct Scene;
 
 struct Scene {
@@ -310,82 +376,8 @@ struct Scene {
         randomRoof = b;
     }
 
-    //EMIL
-    //Create List with intersections
-/*    list<IntersectionPoint> intersections (Ray R) {
-        list<IntersectionPoint> intersectionsTmp;
-
-        for (Triangle tri : triangles) {
-            glm::vec3 point{};
-            IntersectionPoint tempIntersected;
-
-            if (tri.rayIntersection(R, point)) {
-
-                tempIntersected.tri = tri;
-                tempIntersected.tri.PointOfIntersection.position = glm::vec4(point + tri.normal * (float) 0.005, 1);
-                tempIntersected.PointTriangleIntersection = point;
-                intersectionsTmp.push_back(tempIntersected);
-            }
-        }
-
-        for (int i = 0; i < tetras.triangles.size(); i++) {
-            glm::vec3 point{};
-            IntersectionPoint tempIntersected2;
-
-            if (tetras.triangles[i].rayIntersection(R, point)) {
-                tempIntersected2.tri = tetras.triangles[i];
-                tempIntersected2.tri.PointOfIntersection.position = glm::vec4(point + tetras.triangles[i].normal * (float) 0.005, 1);
-                tempIntersected2.PointTriangleIntersection = point;
-                intersectionsTmp.push_back(tempIntersected2);
-            }
-        }
-        glm::vec3 startOfRay = R.start.position;
-
-        //EMIL
-        //Sortera intersections
-        intersectionsTmp.sort([&startOfRay](const auto &a, const auto &b) {
-            return glm::length(a.PointTriangleIntersection - startOfRay) > glm::length(b.PointTriangleIntersection - startOfRay);
-        });
-        return intersectionsTmp;
-    }
-    */
 };
 
-/*
-//EMIL
-    glm::vec3 CastShadowRay(Scene scene, glm::vec3 hitSurface, glm::vec3 lightSource){
-
-        Vertex startingPoint = Vertex(hitSurface);
-        Vertex lightPoint = lightSource;
-        Ray ShadowRay = Ray(startingPoint, lightPoint); // Ray från punkt till ljuskälla för att kika om något träffas på vägen
-        glm::vec3 addToColor(1.0,1.0,1.0);
-        //skicka shadow ray
-        //lägg in värden i en lista
-        list<IntersectionPoint> triIntersect = scene.intersections(ShadowRay);
-        glm::vec3 movedLight = glm::vec3(-lightSource.x+0.1, lightSource.y, lightSource.z);
-
-        double distanceLight = glm::distance(hitSurface, movedLight); //Ljuskällan till ytan
-
-        for (auto& tmp : triIntersect)
-        {
-
-            double distanceIntersection  = glm::distance(hitSurface,tmp.PointTriangleIntersection); //ytan till intersection i objekt eller ljuskälla
-            //KAOS, distance blir oändlig många gånger!!!!
-            random_device rd;
-            mt19937 gen(rd());
-            uniform_real_distribution<> distrib(0, 1.0);
-            double random = distrib(gen);
-            if(random > 0.9999){
-                cout << "distance intersection " << distanceIntersection << endl;
-            }
-
-            if (distanceIntersection < distanceLight && triIntersect.size() > 2) { //om (ytan till intersection < Ljuskällan till ytan) --> träff på obj--> skugga
-                addToColor = (glm::vec3(0, 0, 0));
-            }
-        }
-        return addToColor;
-    }
-*/
 struct Pixel{
     Pixel() : color(ColorDbl{}){}
     Pixel(ColorDbl rgb) : color(rgb){}
@@ -556,7 +548,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{8.0,0.0,-4.0};
+    light.position = vec3{3.0,-1.0,1.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -599,11 +591,8 @@ int main() {
                 }
 
 
-                //EMIL
-                //glm::vec3 Point = (vec3)current.end.position + vec3(current.direction.direction * 0.01f);
                 ColorDbl shadowOrNot = (shadedRay)?ColorDbl{}:ColorDbl{1.0,1.0,1.0};
 
-                //bör multipliceras med shadowOrNot för att skuggorna ska skapas
                 pixelAvg += (current.color) * shadowOrNot;
                 //KAOS, bör inte vara 0 hela tiden
                 if(random > 0.9999){
