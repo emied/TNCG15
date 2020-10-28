@@ -285,28 +285,29 @@ struct IntersectionPoint{
 */
 
 struct Sphere{
-
+    ColorDbl color;
     vec3 centerOfSphere;
     double rad;
-    double t = 0.0;
+
 
     Sphere(){}
 
-    Sphere(double radius, vec3 centerSphere){
+    Sphere(double radius, vec3 centerSphere, ColorDbl c){
     centerOfSphere = centerSphere;
     rad = radius;
+    color = ColorDbl(255,0,0);
     }
 
     //inspired by
     //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
-    bool sphereRayIntersection(Ray& ray, double &t){
-
+    bool sphereRayIntersection(Ray& ray){
+        double t = 100000;
         double r = rad;
-        vec3 direction = ray.direction.direction;
+        vec3 direction = normalize(vec3(ray.end - ray.start));
         vec3 sphereCenter = centerOfSphere;
         vec3 L = sphereCenter - direction;
 
-        double tca = dot((L*2.0f), direction);
+        double tca = dot((L), direction);
 
         if(tca < EPSILON) return false;
 
@@ -330,11 +331,12 @@ struct Sphere{
             }
         }
 
+      //  ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction*f;
         //hit
         t = t0;
         float f = (float) t;
-        vec3 collision = ray.start.position + vec4(direction*f,0.0);
-
+        ray.color = color;
+        cout << "color: " << ray.color.r << " t" << t << endl;
         return true;
 
     }
@@ -353,6 +355,7 @@ struct Scene;
 struct Scene {
     Triangle triangles[24]{};
     Tetrahedron tetras{};
+    Sphere spheres{};
     //Vertex vertices[14];
     bool randomRoof;
     Scene() = default;
@@ -369,12 +372,13 @@ struct Scene {
         }
         random = distrib(gen);
         tetras.rayIntersection(intersectingRay, random > 0.9999);
-
+        spheres.sphereRayIntersection(intersectingRay);
     }
 
     void setRandomRoof(bool b) {
         randomRoof = b;
     }
+
 
 };
 
@@ -509,11 +513,8 @@ void createScene(Scene *world){
                                 vec3(7.5,-2,-3),
                                 vec3(7,0,0),
                                 ColorDbl(0,150,0));
-
-
-    //Add point light
-    LightSource().color = vec3{1.0,1.0,1.0};
-    LightSource().position = vec3{5.0,5.0,5.0};
+    //Create Sphere
+    world->spheres = Sphere(1,vec3(6,0,0),ColorDbl(255, 0, 0));
 
 }
 
