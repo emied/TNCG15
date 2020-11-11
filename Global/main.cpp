@@ -57,7 +57,7 @@ struct ColorDbl{
         return *this;
     }
 
-    ColorDbl& operator*=(float scalar){
+    ColorDbl& operator*=(double scalar){
         r *= scalar;
         g *= scalar;
         b *= scalar;
@@ -65,7 +65,7 @@ struct ColorDbl{
     }
 };
 
-ColorDbl operator*(ColorDbl const& color, float scalar){
+ColorDbl operator*(ColorDbl const& color, double scalar){
     ColorDbl ret{};
     ret.r = color.r*scalar;
     ret.g = color.g*scalar;
@@ -151,9 +151,7 @@ struct Vertex {
 
 struct Direction {
     glm::vec3 direction;
-    Direction(): direction(glm::vec3{}) {
-        direction = glm::vec3(0.0,0.0,0.0);
-    }
+    Direction(): direction(glm::vec3{}) {}
     Direction(Vertex in) : direction(in.position){}
 
 };
@@ -161,16 +159,18 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
-    Ray() : start{}, end{} {}
+    Ray() : start{}, end{}, endTriangle{} {}
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
         end = vertex2;
+        endTriangle = nullptr;
         direction.direction = normalize(vertex2 - vertex1);
     }
 
     Ray(Vertex startP, Direction dir )
     {
         start = startP;
+        endTriangle = nullptr;
         direction = dir;
     }
 
@@ -354,7 +354,7 @@ struct Sphere{
 struct Scene;
 
 struct Scene {
-    Triangle triangles[24]{};
+    Triangle walls[24]{};
     Tetrahedron tetras{};
     Sphere spheres{};
     //Vertex vertices[14];
@@ -369,7 +369,7 @@ struct Scene {
         double random = distrib(gen);
         for(int i = 0; i < 24 ;i++){
             random = distrib(gen);
-            if(triangles[i].rayIntersection(intersectingRay)){break;}
+            if(walls[i].rayIntersection(intersectingRay)){break;}
         }
         random = distrib(gen);
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
@@ -455,49 +455,49 @@ void createScene(Scene *world){
     cout << "Grey value: " << val << endl;
      colors[0] = ColorDbl(val,val,val); */
 
-    world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r, grey_lam);
-    world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r, grey_lam);
-    world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r, grey_lam);
-    world->triangles[3] = Triangle(vrtx0r, vrtx4r, vrtx5r, grey_lam);
-    world->triangles[4] = Triangle(vrtx0r, vrtx5r, vrtx6r, grey_lam);
-    world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r, grey_lam);
+    world->walls[0] = Triangle(vrtx0r, vrtx1r, vrtx2r, grey_lam);
+    world->walls[1] = Triangle(vrtx0r, vrtx2r, vrtx3r, grey_lam);
+    world->walls[2] = Triangle(vrtx0r, vrtx3r, vrtx4r, grey_lam);
+    world->walls[3] = Triangle(vrtx0r, vrtx4r, vrtx5r, grey_lam);
+    world->walls[4] = Triangle(vrtx0r, vrtx5r, vrtx6r, grey_lam);
+    world->walls[5] = Triangle(vrtx0r, vrtx6r, vrtx1r, grey_lam);
 
     //Floor = White
-    world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f, white_lam);
-    world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f, white_lam);
-    world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f, white_lam);
-    world->triangles[9] =  Triangle(vrtx0f, vrtx5f, vrtx4f, white_lam);
-    world->triangles[10] = Triangle(vrtx0f, vrtx6f, vrtx5f, white_lam);
-    world->triangles[11] = Triangle(vrtx0f, vrtx1f, vrtx6f, white_lam);
+    world->walls[6] = Triangle(vrtx0f, vrtx2f, vrtx1f, white_lam);
+    world->walls[7] = Triangle(vrtx0f, vrtx3f, vrtx2f, white_lam);
+    world->walls[8] = Triangle(vrtx0f, vrtx4f, vrtx3f, white_lam);
+    world->walls[9] =  Triangle(vrtx0f, vrtx5f, vrtx4f, white_lam);
+    world->walls[10] = Triangle(vrtx0f, vrtx6f, vrtx5f, white_lam);
+    world->walls[11] = Triangle(vrtx0f, vrtx1f, vrtx6f, white_lam);
 
     //Walls
     //Wall 1 = Red
-    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f, red_lam);
-    world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f, red_lam);
+    world->walls[12] = Triangle(vrtx2r, vrtx1r, vrtx2f, red_lam);
+    world->walls[13] = Triangle(vrtx1f, vrtx1r, vrtx2f, red_lam);
 
     //Wall 2 = Yellow
-    world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f, yellow_lam);
-    world->triangles[15] = Triangle(vrtx2f, vrtx3f, vrtx2r, yellow_lam);
+    world->walls[14] = Triangle(vrtx3r, vrtx2r, vrtx3f, yellow_lam);
+    world->walls[15] = Triangle(vrtx2f, vrtx3f, vrtx2r, yellow_lam);
 
     //Wall 3 = Green
-    world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f, green_lam);
-    world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r, green_lam);
+    world->walls[16] = Triangle(vrtx4r, vrtx3r, vrtx4f, green_lam);
+    world->walls[17] = Triangle(vrtx3f, vrtx4f, vrtx3r, green_lam);
 
     //Wall 4 = Teal
-    world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f,teal_lam);
-    world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f, teal_lam);
+    world->walls[18] = Triangle(vrtx5r, vrtx4r, vrtx4f, teal_lam);
+    world->walls[19] = Triangle(vrtx5r, vrtx4f, vrtx5f, teal_lam);
 
     //Wall 5 = Blue
-    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f, blue_lam);
-    world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r, blue_lam);
+    world->walls[20] = Triangle(vrtx6r, vrtx5r, vrtx6f, blue_lam);
+    world->walls[21] = Triangle(vrtx5f, vrtx6f, vrtx5r, blue_lam);
 
     //Wall 6 = Purple
-    world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f, purple_lam);
-    world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f, purple_lam);
+    world->walls[22] = Triangle(vrtx1r, vrtx6r, vrtx6f, purple_lam);
+    world->walls[23] = Triangle(vrtx1r, vrtx6f, vrtx1f, purple_lam);
 /*
     for (int i = 0; i < 24; i++)
     {
-        world->triangles[i].mat.color_ = blue_lam.color_;
+        world->walls[i].mat.color_ = blue_lam.color_;
     }*/
 
     //create Tetrahedron
@@ -540,7 +540,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{10.0,-1.0,4.0};
+    light.position = vec3{3.0,-1.0,1.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -567,10 +567,10 @@ int main() {
                 Ray shadow{};
                 double u , v;
                 ColorDbl shadowOrNot = {1.0,1.0,1.0};
-                float distance;
 
                 bool sph = world.spheres.sphereRayIntersection(current);
                 //Shadow for triangle objects
+                double distanceToLight;
                 if (!sph)
                 {
                     u = current.intersectionPoint.position.y;
@@ -586,13 +586,20 @@ int main() {
                     random = distrib(gen);
                     world.rayIntersection(shadow);
                     bool shadedRay = false;
-                    if (shadow.intersectionPoint.position.x <= 0.9 && shadow.intersectionPoint.position.x >= 0)
+                    if (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0)
                     {
                         shadedRay = true;
                     }
+                    vec3 dist = shadow.end - shadow.start;
+                    distanceToLight = sqrt(pow(dist.x,2) + pow(dist.y,2) + pow(dist.z,2));
 
-                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
-
+                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0,1.0,1.0};
+                    shadowOrNot *= 1/distanceToLight;
+                    if(random > 0.9999){
+                        if(shadowOrNot.r <= 0.001){
+                            cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
+                        }
+                    }
                 }
                     //Shadow for implicit objects
                 else if(sph){
@@ -602,7 +609,6 @@ int main() {
 
                 pixelAvg += (current.color) * shadowOrNot;
 
-                //KAOS, bör inte vara 0 hela tiden
                 if(random > 0.9999){
                     //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
                     //cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
@@ -626,9 +632,9 @@ int main() {
     //write cam.image to output img
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            img.r(i, j) = cam.image[(height - 1 - i) * width + j].color.r;
-            img.g(i, j) = cam.image[(height - 1 - i) * width + j].color.g;
-            img.b(i, j) = cam.image[(height - 1 - i) * width + j].color.b;
+            img.r(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.r/maxIntensity;
+            img.g(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.g/maxIntensity;
+            img.b(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.b/maxIntensity;
         }
     }
 
