@@ -188,24 +188,11 @@ enum Type {
 struct Material{
     Type typ_;
     ColorDbl color_;
-    Material()= default;
+    Material() : color_(ColorDbl{}), typ_(Type{}){}
 
     Material(ColorDbl color, Type typ){
         color_ = color;
         typ_ = typ;
-    }
-
-    //Onödig?
-    Material operator=(Material &mat){
-        this->color_ = mat.color_;
-        this->typ_ = mat.typ_;
-        return *this;
-    }
-
-    Material operator=(const Material &mat){
-        this->color_ = mat.color_;
-        this->typ_ = mat.typ_;
-        return *this;
     }
 };
 
@@ -385,7 +372,8 @@ struct Scene {
             if(triangles[i].rayIntersection(intersectingRay)){break;}
         }
         random = distrib(gen);
-        tetras.rayIntersection(intersectingRay, random > 0.9999);
+        //tetras.rayIntersection(intersectingRay, random > 0.9999);
+        tetras.rayIntersection(intersectingRay);
         spheres.sphereRayIntersection(intersectingRay);
     }
 
@@ -552,7 +540,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{3.0,-1.0,1.0};
+    light.position = vec3{10.0,-1.0,4.0};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -598,7 +586,7 @@ int main() {
                     random = distrib(gen);
                     world.rayIntersection(shadow);
                     bool shadedRay = false;
-                    if (shadow.intersectionPoint.position.x <= 0.99 && shadow.intersectionPoint.position.x >= 0)
+                    if (shadow.intersectionPoint.position.x <= 0.9 && shadow.intersectionPoint.position.x >= 0)
                     {
                         shadedRay = true;
                     }
