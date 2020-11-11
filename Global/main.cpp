@@ -18,9 +18,9 @@ struct ColorDbl{
     ColorDbl(double red, double green, double blue) : r(red), g(green), b(blue){}
     ColorDbl(vec3 color)
     {
-      r = color.x;
-      g = color.y;
-      b = color.z;
+        r = color.x;
+        g = color.y;
+        b = color.z;
     }
 
     ColorDbl& operator+=(ColorDbl const& other){
@@ -64,6 +64,7 @@ struct ColorDbl{
         return *this;
     }
 };
+
 ColorDbl operator*(ColorDbl const& color, float scalar){
     ColorDbl ret{};
     ret.r = color.r*scalar;
@@ -92,8 +93,6 @@ struct image{
     int w,h;
     vector<uint8_t> data;
 };
-
-void generateGradientImage(image *image);
 
 template<class Stream>
 Stream & operator<<(Stream & out, image const& img){
@@ -180,39 +179,63 @@ struct Ray {
     Triangle* endTriangle;
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
     Direction direction;
+};
 
+enum Type {
+    LAMBERTIAN, SPECULAR, LIGHTSOURCE, ORENNAYAR, GLASS
+};
 
+struct Material{
+    Type typ_;
+    ColorDbl color_;
+    Material()= default;
+
+    Material(ColorDbl color, Type typ){
+        color_ = color;
+        typ_ = typ;
+    }
+
+    //Onödig?
+    Material operator=(Material &mat){
+        this->color_ = mat.color_;
+        this->typ_ = mat.typ_;
+        return *this;
+    }
+
+    Material operator=(const Material &mat){
+        this->color_ = mat.color_;
+        this->typ_ = mat.typ_;
+        return *this;
+    }
 };
 
 
 struct Triangle {
-
-    ColorDbl color;
     Vertex vec0, vec1, vec2;
     vec3 normal{};
     double d{};
     Vertex PointOfIntersection;
     double Tout;
+    Material mat;
 
-
-    Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
-
-    Triangle(Vertex v1, Vertex v2, Vertex v3){
+   // Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
+    Triangle() {}
+    Triangle(Vertex v1, Vertex v2, Vertex v3, Material mat_){
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
         normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
         d = dot(normal, (vec3)vec0.position);
-        color = ColorDbl();
+        mat = mat_;
     }
 
-    Triangle(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
+    Triangle(Vertex v1, Vertex v2, Vertex v3, Vertex v4, Material mat_){
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
         normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
         d = dot(normal, (vec3)vec0.position);
-        color = ColorDbl();
+        mat = mat_;
         if(dot(normal, (vec3)v4.position) > 0){
             normal = -normal;
         }
@@ -220,15 +243,15 @@ struct Triangle {
 
     bool rayIntersection(Ray& intersectingRay, bool print = false, glm::vec3 point = vec3{}) {
 
-         //Möller-Trumbore
-         vec3 T, E_1, E_2, D, P, Q;
-         T = (vec3) (intersectingRay.start.position - vec0.position);
-         E_1 = (vec3) (vec1.position - vec0.position);
-         E_2 = (vec3) (vec2.position - vec0.position);
-         D = intersectingRay.end.position - intersectingRay.start.position;
-         P = cross(D, E_2);
-         Q = cross(T, E_1);
-         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
+        //Möller-Trumbore
+        vec3 T, E_1, E_2, D, P, Q;
+        T = (vec3) (intersectingRay.start.position - vec0.position);
+        E_1 = (vec3) (vec1.position - vec0.position);
+        E_2 = (vec3) (vec2.position - vec0.position);
+        D = intersectingRay.end.position - intersectingRay.start.position;
+        P = cross(D, E_2);
+        Q = cross(T, E_1);
+        vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
         if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
             if(intersectingRay.intersectionPoint.position.x > tuv.x) {
@@ -238,64 +261,59 @@ struct Triangle {
                 }
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
-                intersectingRay.color = this->color;
+                intersectingRay.color = this->mat.color_;
             }
             return true;
         } else {
             return false;
         }
     }
+
+    Triangle& operator= (Triangle const &Tri){
+        this->vec0 = Tri.vec0;
+        this->vec1 = Tri.vec1;
+        this->vec2 = Tri.vec2;
+        this->normal = Tri.normal;
+        this->PointOfIntersection = Tri.PointOfIntersection;
+        this->mat = Tri.mat;
+        return *this;
+    }
+
 };
 
 
 struct Tetrahedron {
-    ColorDbl color;
     vector<Triangle> triangles;
-    Tetrahedron() {
-        color = ColorDbl{};
-        //triangles = vector<Triangle>{};
+    Material mat = Material(ColorDbl(255,80,255), LAMBERTIAN);
 
+    Tetrahedron() {}
+    Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
+        triangles = {Triangle(v1, v2, v3, v4, mat), Triangle(v1, v2, v4, v3,mat), Triangle(v1, v3, v4, v2,mat), Triangle(v2, v3, v4, v1, mat)};
     }
-    Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4,ColorDbl c){
-        color = c;
-        triangles = {Triangle(v1, v2, v3, v4), Triangle(v1, v2, v4, v3), Triangle(v1, v3, v4, v2), Triangle(v2, v3, v4, v1)};
-    }
-
-    //Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4) : Tetrahedron(v1,v2,v3,v4, ColorDbl{}){}
 
     bool rayIntersection(Ray& intersectingRay, bool print = false) {
         bool collision = false;
-        glm::vec3 tmp{}; // tmp är ny här och i ifen 2 rader under
         for(Triangle tri : triangles) {
             if(tri.rayIntersection(intersectingRay, print)){
-                intersectingRay.color = color;
+                intersectingRay.color = mat.color_;
                 collision = true;
-
             }
         }
         return collision;
     }
 };
-/*
-struct IntersectionPoint{
-    Triangle tri;
-    glm::vec3 PointTriangleIntersection;
-    float w;
-};
-*/
 
 struct Sphere{
-    ColorDbl color;
     vec3 centerOfSphere;
     double rad;
-
+    Material mat;
 
     Sphere(){}
 
-    Sphere(double radius, vec3 centerSphere, ColorDbl c){
-    centerOfSphere = centerSphere;
-    rad = radius;
-    color = ColorDbl(255,0,0);
+    Sphere(double radius, vec3 centerSphere){
+        centerOfSphere = centerSphere;
+        rad = radius;
+        mat = Material(ColorDbl(255,0,0),LAMBERTIAN);
     }
 
     //inspired by
@@ -331,12 +349,11 @@ struct Sphere{
             }
         }
 
-      //  ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction*f;
+        //  ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction*f;
         //hit
         t = t0;
         float f = (float) t;
-        ray.color = color;
-        cout << "color: " << ray.color.r << " t" << t << endl;
+        ray.color = mat.color_;
         return true;
 
     }
@@ -346,9 +363,6 @@ struct Sphere{
     }
 
 };
-
-
-
 
 struct Scene;
 
@@ -378,8 +392,6 @@ struct Scene {
     void setRandomRoof(bool b) {
         randomRoof = b;
     }
-
-
 };
 
 struct Pixel{
@@ -407,7 +419,6 @@ struct Camera{
         if(perspective){return leftEye;}
         else{return rightEye;}
     }
-
 };
 
 struct LightSource{
@@ -418,7 +429,6 @@ struct LightSource{
 
 void createScene(Scene *world){
 
-    ColorDbl colors[8];
     //Vertex points r = roof, f = floor
     Vertex vrtx0r = Vertex(5.0, 0.0, 5.0, 1.0); //vrtx0r mitten toppen
     Vertex vrtx1r = Vertex(-3.0, 0.0, 5.0, 1.0); //vrtx1r
@@ -436,6 +446,16 @@ void createScene(Scene *world){
     Vertex vrtx5f = Vertex(10.0, -6.0, -5.0, 1.0); //vrtx5f
     Vertex vrtx6f = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
 
+
+    Material white_lam = Material(ColorDbl(255,255,255), LAMBERTIAN);
+    Material red_lam = Material(ColorDbl(255,0,0), LAMBERTIAN);
+    Material blue_lam = Material(ColorDbl(0,0,255), LAMBERTIAN);
+    Material green_lam = Material(ColorDbl(0,255,0), LAMBERTIAN);
+    Material purple_lam = Material(ColorDbl(255,0,255), LAMBERTIAN);
+    Material grey_lam = Material(ColorDbl(204,204,204), LAMBERTIAN);
+    Material yellow_lam = Material(ColorDbl(255,255,0), LAMBERTIAN);
+    Material teal_lam = Material(ColorDbl(0,255,255), LAMBERTIAN);
+/*
     //Roof = Random Grey
     random_device rd;
     mt19937  gen(rd());
@@ -445,79 +465,62 @@ void createScene(Scene *world){
         val = distrib ( gen);
     }
     cout << "Grey value: " << val << endl;
-    colors[0] = ColorDbl(val,val,val);
-    world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r);
-    world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r);
-    world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r);
-    world->triangles[3] = Triangle(vrtx0r, vrtx4r, vrtx5r);
-    world->triangles[4] = Triangle(vrtx0r, vrtx5r, vrtx6r);
-    world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r);
+     colors[0] = ColorDbl(val,val,val); */
+
+    world->triangles[0] = Triangle(vrtx0r, vrtx1r, vrtx2r, grey_lam);
+    world->triangles[1] = Triangle(vrtx0r, vrtx2r, vrtx3r, grey_lam);
+    world->triangles[2] = Triangle(vrtx0r, vrtx3r, vrtx4r, grey_lam);
+    world->triangles[3] = Triangle(vrtx0r, vrtx4r, vrtx5r, grey_lam);
+    world->triangles[4] = Triangle(vrtx0r, vrtx5r, vrtx6r, grey_lam);
+    world->triangles[5] = Triangle(vrtx0r, vrtx6r, vrtx1r, grey_lam);
 
     //Floor = White
-    colors[1] = ColorDbl(255,255,255);
-    world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f);
-    world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f);
-    world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f);
-    world->triangles[9] =  Triangle(vrtx0f, vrtx5f, vrtx4f);
-    world->triangles[10] = Triangle(vrtx0f, vrtx6f, vrtx5f);
-    world->triangles[11] = Triangle(vrtx0f, vrtx1f, vrtx6f);
-
+    world->triangles[6] = Triangle(vrtx0f, vrtx2f, vrtx1f, white_lam);
+    world->triangles[7] = Triangle(vrtx0f, vrtx3f, vrtx2f, white_lam);
+    world->triangles[8] = Triangle(vrtx0f, vrtx4f, vrtx3f, white_lam);
+    world->triangles[9] =  Triangle(vrtx0f, vrtx5f, vrtx4f, white_lam);
+    world->triangles[10] = Triangle(vrtx0f, vrtx6f, vrtx5f, white_lam);
+    world->triangles[11] = Triangle(vrtx0f, vrtx1f, vrtx6f, white_lam);
 
     //Walls
     //Wall 1 = Red
-    colors[2] = ColorDbl(255,0,0);
-    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f);
-    world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f);
+    world->triangles[12] = Triangle(vrtx2r, vrtx1r, vrtx2f, red_lam);
+    world->triangles[13] = Triangle(vrtx1f, vrtx1r, vrtx2f, red_lam);
 
     //Wall 2 = Yellow
-    colors[3] = ColorDbl(255,255,0);
-    world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f);
-    world->triangles[15] = Triangle(vrtx2f, vrtx3f, vrtx2r);
+    world->triangles[14] = Triangle(vrtx3r, vrtx2r, vrtx3f, yellow_lam);
+    world->triangles[15] = Triangle(vrtx2f, vrtx3f, vrtx2r, yellow_lam);
 
     //Wall 3 = Green
-    colors[4] = ColorDbl(0,255,0);
-    world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f);
-    world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r);
+    world->triangles[16] = Triangle(vrtx4r, vrtx3r, vrtx4f, green_lam);
+    world->triangles[17] = Triangle(vrtx3f, vrtx4f, vrtx3r, green_lam);
 
     //Wall 4 = Teal
-    colors[5] = ColorDbl(0,255,255);
-    world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f);
-    world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f);
+    world->triangles[18] = Triangle(vrtx5r, vrtx4r, vrtx4f,teal_lam);
+    world->triangles[19] = Triangle(vrtx5r, vrtx4f, vrtx5f, teal_lam);
 
     //Wall 5 = Blue
-    colors[6] = ColorDbl(0,0,255);
-    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f);
-    world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r);
+    world->triangles[20] = Triangle(vrtx6r, vrtx5r, vrtx6f, blue_lam);
+    world->triangles[21] = Triangle(vrtx5f, vrtx6f, vrtx5r, blue_lam);
 
     //Wall 6 = Purple
-    colors[7] = ColorDbl(255,0,255);
-    world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f);
-    world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f);
+    world->triangles[22] = Triangle(vrtx1r, vrtx6r, vrtx6f, purple_lam);
+    world->triangles[23] = Triangle(vrtx1r, vrtx6f, vrtx1f, purple_lam);
+/*
+    for (int i = 0; i < 24; i++)
+    {
+        world->triangles[i].mat.color_ = blue_lam.color_;
+    }*/
 
-    //Actually assign colours
-    for(int j = 0; j < 24; j++){
-        if(j < 12) {
-            world->triangles[j].color = colors[j/6];
-        } else {
-            world->triangles[j].color = colors[(int)floor(j/2) - 4];
-        }
-    }
     //create Tetrahedron
-    /*world->tetras = Tetrahedron(vec3(8,0,2),
-                                vec3(7,0,-3),
-                                vec3(9,3,-1),
-                                vec3(9,-2,-1),
-                                ColorDbl(0,150,0));*/
     world->tetras = Tetrahedron(vec3(6,0,-3),
                                 vec3(8,2,-3),
                                 vec3(7.5,-2,-3),
-                                vec3(7,0,0),
-                                ColorDbl(0,150,0));
+                                vec3(7,0,0));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(6,0,0),ColorDbl(255, 0, 0));
+    world->spheres = Sphere(1,vec3(6,-2,2));
 
 }
-
 
 
 int main() {
@@ -575,26 +578,42 @@ int main() {
 
                 Ray shadow{};
                 double u , v;
-                u = current.intersectionPoint.position.y;
-                v = current.intersectionPoint.position.z;
+                ColorDbl shadowOrNot = {1.0,1.0,1.0};
+                float distance;
 
-                shadow.start = Vertex{(1-u-v)*(vec3)current.endTriangle->vec0.position + u*current.endTriangle->vec1.position + v*current.endTriangle->vec2.position};
-                //Move start out of object
-                shadow.start = (vec3)shadow.start.position + 0.1*(current.start.position - current.end.position);
-                shadow.end = light.position;
+                bool sph = world.spheres.sphereRayIntersection(current);
+                //Shadow for triangle objects
+                if (!sph)
+                {
+                    u = current.intersectionPoint.position.y;
+                    v = current.intersectionPoint.position.z;
 
+                    shadow.start = Vertex{(1 - u - v) * (vec3) current.endTriangle->vec0.position +
+                                          u * current.endTriangle->vec1.position +
+                                          v * current.endTriangle->vec2.position};
+                    //Move start out of object
+                    shadow.start = (vec3) shadow.start.position + 0.1 * (current.start.position - current.end.position);
+                    shadow.end = light.position;
 
-                random = distrib(gen);
-                world.rayIntersection(shadow);
-                bool shadedRay = false;
-                if(shadow.intersectionPoint.position.x <= 1 && shadow.intersectionPoint.position.x >= 0){
-                    shadedRay = true;
+                    random = distrib(gen);
+                    world.rayIntersection(shadow);
+                    bool shadedRay = false;
+                    if (shadow.intersectionPoint.position.x <= 0.99 && shadow.intersectionPoint.position.x >= 0)
+                    {
+                        shadedRay = true;
+                    }
+
+                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
+
+                }
+                    //Shadow for implicit objects
+                else if(sph){
+
+                    pixelAvg += (current.color);
                 }
 
-
-                ColorDbl shadowOrNot = (shadedRay)?ColorDbl{}:ColorDbl{1.0,1.0,1.0};
-
                 pixelAvg += (current.color) * shadowOrNot;
+
                 //KAOS, bör inte vara 0 hela tiden
                 if(random > 0.9999){
                     //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
@@ -631,27 +650,4 @@ int main() {
     cout << "Wrote file " << filename << endl;
 
     return 0;
-}
-
-
-
-
-//to be removed
-void generateGradientImage(image *image) {
-    int width = image->w, height = image->h;
-
-
-    for(int i = 0; i < height; i++){
-        double normI = ((double)i)/((double)height);
-        for(int j = 0; j < width; j++){
-            double normJ = ((double)j)/((double)width);
-            image->r(j,i) = (255*normI);
-            if(normJ >= normI) {
-                image->g(j,i) = (255 * normI / normJ);
-            } else {
-                image->g(j,i) = (255 * normJ / normI);
-            }
-            image->b(j,i) = (255*normJ);
-        }
-    }
 }
