@@ -228,7 +228,7 @@ struct Triangle {
         }
     }
 
-    bool rayIntersection(Ray& intersectingRay, bool print = false, glm::vec3 point = vec3{}) {
+    bool rayIntersection(Ray& intersectingRay, bool print = false) {
 
         //Möller-Trumbore
         vec3 T, E_1, E_2, D, P, Q;
@@ -283,6 +283,7 @@ struct Tetrahedron {
         for(Triangle tri : triangles) {
             if(tri.rayIntersection(intersectingRay, print)){
                 intersectingRay.color = mat.color_;
+                intersectingRay.endTriangle = &triangles[0];
                 collision = true;
             }
         }
@@ -366,14 +367,18 @@ struct Scene {
         random_device rd;
         mt19937 gen(rd());
         uniform_real_distribution<> distrib(0, 1.0);
-        double random = distrib(gen);
+        double random;
         for(int i = 0; i < 24 ;i++){
-            random = distrib(gen);
+            if(print){
+                random = distrib(gen);
+            }
             if(walls[i].rayIntersection(intersectingRay)){break;}
         }
-        random = distrib(gen);
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
-        tetras.rayIntersection(intersectingRay);
+        if(print){
+            random = distrib(gen);
+        }
+        tetras.rayIntersection(intersectingRay,print && (random > 0.9999));
         spheres.sphereRayIntersection(intersectingRay);
     }
 
@@ -562,7 +567,7 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current);
+                world.rayIntersection(current, distrib(gen) < .99);
 
                 Ray shadow{};
                 double u , v;
@@ -571,8 +576,7 @@ int main() {
                 bool sph = world.spheres.sphereRayIntersection(current);
                 //Shadow for triangle objects
                 double distanceToLight;
-                if (!sph)
-                {
+                if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
 
@@ -586,21 +590,25 @@ int main() {
                     random = distrib(gen);
                     world.rayIntersection(shadow);
                     bool shadedRay = false;
-                    if (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0)
-                    {
+                    if (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0) {
                         shadedRay = true;
                     }
                     vec3 dist = shadow.end - shadow.start;
-                    distanceToLight = sqrt(pow(dist.x,2) + pow(dist.y,2) + pow(dist.z,2));
+                    distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
 
-                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0,1.0,1.0};
-                    shadowOrNot *= 1/distanceToLight;
-                    if(random > 0.9999){
-                        if(shadowOrNot.r <= 0.001){
-                            cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
-                        }
+                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
+                    shadowOrNot *= 1 / distanceToLight;
+                    if (shadowOrNot.r <= 0.001 && shadowOrNot.g <= 0.001 && shadowOrNot.b <= 0.001) {
+                        cout << "Ray index: (" << i << "," << j << ")." << endl;
+                        cout << "Current ray end triangle vec0:" << endl <<
+                        "x: " << current.endTriangle->vec0.position.x <<
+                        " y: " << current.endTriangle->vec0.position.y <<
+                        " z: " << current.endTriangle->vec0.position.z << endl;
+                        cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y
+                             << " z: " << shadow.start.position.z << endl;
                     }
                 }
+
                     //Shadow for implicit objects
                 else if(sph){
 
@@ -618,9 +626,11 @@ int main() {
                     /*cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
                     ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl;*/
                 }
-                if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
-                if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
-                if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
+                if(!sph) {
+                    if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
+                    if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
+                    if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
+                }
             }
             pixelAvg /= raysPerPixel;
             cam.image[i * width + j] = Pixel(pixelAvg);
