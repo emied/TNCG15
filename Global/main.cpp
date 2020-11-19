@@ -608,11 +608,11 @@ int main() {
                 world.rayIntersection(shadow);
                 bool shadedRay;
                 if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0);}
-                if(sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0);}
+                if(sph){shadedRay = true;}
                 vec3 dist = shadow.end - shadow.start;
                 distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
 
-                shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
+                shadowOrNot = (shadedRay) ? ColorDbl{.2,.2,.2} : ColorDbl{1.0, 1.0, 1.0};
 
                 shadowOrNot *= 1/ distanceToLight;
                 pixelAvg += (current.color) * shadowOrNot;
