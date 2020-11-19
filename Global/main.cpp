@@ -541,7 +541,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{8,-3,-1};
+    light.position = vec3{3,-1,1};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
