@@ -9,7 +9,7 @@
 
 using namespace std;
 using namespace glm;
-long double EPSILON = 0.00000001;
+long double EPSILON = 0.01;
 
 struct ColorDbl{
 
@@ -310,8 +310,7 @@ struct Sphere{
         double t = DBL_MAX;
         double r = rad;
         vec3 direction = normalize(vec3(ray.end - ray.start));
-        vec3 sphereCenter = centerOfSphere;
-        vec3 L = sphereCenter - direction;
+        vec3 L = centerOfSphere - direction;
 
         double tca = dot((L), direction);
 
@@ -319,11 +318,11 @@ struct Sphere{
 
         double tcaSquared = (tca*tca);
         double radiusSquared = (r*r);
-        float d = dot(L,L) - tcaSquared;
+        float dsquared = dot(L, L) - tcaSquared;
 
-        if(radiusSquared < d) return false;
+        if(radiusSquared < dsquared) return false;     //check if ray hits sphere
 
-        double thc = sqrt(radiusSquared-d);
+        double thc = sqrt(radiusSquared - dsquared);
 
         double t0 = tca-thc;
         double t1 = tca+thc;
@@ -334,7 +333,7 @@ struct Sphere{
             return false;
         }
 
-        //  ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction*f;
+        ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction;
         //hit
         t = t0;
         float f = (float) t;
@@ -505,10 +504,10 @@ void createScene(Scene *world){
     //create Tetrahedron
     world->tetras = Tetrahedron(vec3(6,0,-3),
                                 vec3(8,2,-3),
-                                vec3(7.5,-2,-3),
+                                vec3(8,-2,-4),
                                 vec3(7,0,0));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(6,-2,2));
+    world->spheres = Sphere(1,vec3(7,3,0));
 
 }
 
@@ -542,7 +541,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{3.0,-1.0,1.0};
+    light.position = vec3{8,-3,-1};
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -577,25 +576,13 @@ int main() {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
 
-                    shadow.start = Vertex{(1 - u - v) * (vec3) current.endTriangle->vec0.position +
+                    shadow.start = Vertex{(1 - u - v) * current.endTriangle->vec0.position +
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
                     //Move start out of object
                     shadow.start = (vec3) shadow.start.position + 1.9 * (current.start.position - current.end.position);
-                    shadow.end = light.position;
 
-                    random = distrib(gen);
-                    world.rayIntersection(shadow);
-                    bool shadedRay = false;
-                    if (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0) {
-                        shadedRay = true;
-                    }
-                    vec3 dist = shadow.end - shadow.start;
-                    distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
-
-                    shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
-                    shadowOrNot *= 1 / distanceToLight;
-                    if (shadowOrNot.r <= 0.001 && shadowOrNot.g <= 0.001 && shadowOrNot.b <= 0.001 && false) {
+                    if (shadowOrNot.r < 0 && shadowOrNot.g < 0 && shadowOrNot.b < 0) {
                         cout << "Ray index: (" << i << "," << j << ")." << endl;
                         cout << "Current ray end triangle vec0:" << endl <<
                         "x: " << current.endTriangle->vec0.position.x <<
@@ -607,13 +594,30 @@ int main() {
                 }
 
                     //Shadow for implicit objects
-                else if(sph){
-
-                    pixelAvg += (current.color);
+                else if(sph) {
+                    random = distrib(gen);
+                    shadow.start = Vertex{(vec3) current.intersectionPoint.position + world.spheres.centerOfSphere};
+                    if (random > 0.99) {
+                        cout << "Ray index: (" << i << "," << j << ")." << endl;
+                        cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y
+                             << " z: " << shadow.start.position.z << endl;
+                    }
                 }
 
+                shadow.end = light.position;
+                world.rayIntersection(shadow);
+                bool shadedRay;
+                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0);}
+                if(sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0);}
+                vec3 dist = shadow.end - shadow.start;
+                distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
+
+                shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
+
+                shadowOrNot *= 1/ distanceToLight;
                 pixelAvg += (current.color) * shadowOrNot;
 
+                random = distrib(gen);
                 if(random > 0.9999){
                     //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
                     //cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
