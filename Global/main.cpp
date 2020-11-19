@@ -307,7 +307,7 @@ struct Sphere{
     //inspired by
     //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
     bool sphereRayIntersection(Ray& ray){
-        double t = 100000;
+        double t = DBL_MAX;
         double r = rad;
         vec3 direction = normalize(vec3(ray.end - ray.start));
         vec3 sphereCenter = centerOfSphere;
@@ -330,11 +330,8 @@ struct Sphere{
 
         if(t0 > t1) swap(t0,t1);
 
-        if(t0 < EPSILON){
-            t0 = t1;
-            if (t0 < EPSILON){
-                return false;
-            }
+        if(t0 < EPSILON && t1 < EPSILON){
+            return false;
         }
 
         //  ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction*f;
@@ -584,7 +581,7 @@ int main() {
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
                     //Move start out of object
-                    shadow.start = (vec3) shadow.start.position + 0.1 * (current.start.position - current.end.position);
+                    shadow.start = (vec3) shadow.start.position + 1.9 * (current.start.position - current.end.position);
                     shadow.end = light.position;
 
                     random = distrib(gen);
@@ -598,7 +595,7 @@ int main() {
 
                     shadowOrNot = (shadedRay) ? ColorDbl{} : ColorDbl{1.0, 1.0, 1.0};
                     shadowOrNot *= 1 / distanceToLight;
-                    if (shadowOrNot.r <= 0.001 && shadowOrNot.g <= 0.001 && shadowOrNot.b <= 0.001) {
+                    if (shadowOrNot.r <= 0.001 && shadowOrNot.g <= 0.001 && shadowOrNot.b <= 0.001 && false) {
                         cout << "Ray index: (" << i << "," << j << ")." << endl;
                         cout << "Current ray end triangle vec0:" << endl <<
                         "x: " << current.endTriangle->vec0.position.x <<
