@@ -236,14 +236,20 @@ struct Triangle {
         P = cross(D, E_2);
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
+        if(print){
+            cout << "t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
+            if(tuv.x == (dot(Q,E_2)/dot(P,E_1))){
+                cout << "Correct t val" << endl;
+            }
+            cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z << endl;
+            cout << "Intersecting ray intersection point:" << endl << "x = " << intersectingRay.intersectionPoint.position.x <<
+                                                                ", y = " << intersectingRay.intersectionPoint.position.y <<
+                                                                ", z = " << intersectingRay.intersectionPoint.position.z << endl;
 
+        }
         if (tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y + tuv.z <= 1.0) {
             if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
                 //Update intersectingRay here
-                if (print) {
-                    cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z
-                         << endl;
-                }
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->mat.color_;
@@ -358,16 +364,11 @@ struct Scene {
         uniform_real_distribution<> distrib(0, 1.0);
         double random;
         for(int i = 0; i < 24 ;i++){
-            if(print){
-                random = distrib(gen);
-            }
-            if(walls[i].rayIntersection(intersectingRay)){break;}
+            if (print) cout << "Checking wall i = " << i << endl;
+            if(walls[i].rayIntersection(intersectingRay,print)){break;}
         }
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
-        if(print){
-            random = distrib(gen);
-        }
-        tetras.rayIntersection(intersectingRay,print && (random > 0.9999));
+        tetras.rayIntersection(intersectingRay,print);
         //spheres.sphereRayIntersection(intersectingRay);
     }
 
@@ -565,7 +566,7 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, false);
+                world.rayIntersection(current, (i==172 && j == 590));
 
                 Ray shadow{};
                 double u , v;
@@ -579,7 +580,10 @@ int main() {
                 if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
-
+                    if(i == 172 && j == 590){
+                        cout << "Testing 3, u = " << u << ", v = " << v << endl;
+                        cout << "endTriangle = " << current.endTriangle << endl;
+                    }
                     shadow.start = Vertex{(1 - u - v) * current.endTriangle->vec0.position +
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
