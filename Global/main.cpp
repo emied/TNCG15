@@ -237,18 +237,16 @@ struct Triangle {
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
         if(print){
-            cout << "t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << endl;
-            if(tuv.x == (dot(Q,E_2)/dot(P,E_1))){
-                cout << "Correct t val" << endl;
-            }
+            cout << "t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << ", u+v = " << tuv.y + tuv.z << endl;
             cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z << endl;
             cout << "Intersecting ray intersection point:" << endl << "x = " << intersectingRay.intersectionPoint.position.x <<
                                                                 ", y = " << intersectingRay.intersectionPoint.position.y <<
                                                                 ", z = " << intersectingRay.intersectionPoint.position.z << endl;
 
         }
-        if (tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y + tuv.z <= 1.0) {
+        if (tuv.x > 0 && tuv.y >= 0 && tuv.z >= 0 && tuv.y + tuv.z <= 1.0) {
             if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
+                if(print) cout << "Updating Intersection Ray!" << endl << endl;
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
@@ -364,8 +362,9 @@ struct Scene {
         uniform_real_distribution<> distrib(0, 1.0);
         double random;
         for(int i = 0; i < 24 ;i++){
-            if (print) cout << "Checking wall i = " << i << endl;
-            if(walls[i].rayIntersection(intersectingRay,print)){break;}
+
+            if ((i == 18 || i == 19 || i == 9) && print) cout << "Checking wall i = " << i << endl;
+            if(walls[i].rayIntersection(intersectingRay,((i == 18 || i == 19 || i == 9) && print))){break;}
         }
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
         tetras.rayIntersection(intersectingRay,print);
@@ -547,11 +546,11 @@ int main() {
             int progressPercent = progress*100;
             cout << "Rendering ..." << progressPercent << "%." << endl;
         }
-        if (i == 172){
+        if (i == 192){
             cout << "Testing" << endl;
         }
         for (int j = 0; j < height; j++) {
-            if(i == 172 && j == 590){
+            if(i == 192 && j == 220){
                 cout << "Testing 2" << endl;
             }
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
@@ -566,8 +565,18 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, (i==172 && j == 590));
+                world.rayIntersection(current, (i == 192 && j == 220));
 
+                if(i == 192 && j == 218){
+                    cout << "(i,j) = (" << 800 - i << ", " << 800 - j << ")\nCurrent color is R: " << current.endTriangle->mat.color_.r <<
+                         ", G: " << current.endTriangle->mat.color_.g <<
+                         ", B: " << current.endTriangle->mat.color_.b << endl;
+                }
+                if(i == 190 && j == 220){
+                    cout << "(i,j) = (" << 800 - i << ", " << 800 - j << ")\nCurrent color is R: " << current.endTriangle->mat.color_.r <<
+                         ", G: " << current.endTriangle->mat.color_.g <<
+                         ", B: " << current.endTriangle->mat.color_.b << endl;
+                }
                 Ray shadow{};
                 double u , v;
                 ColorDbl shadowOrNot = {1.0,1.0,1.0};
@@ -580,7 +589,7 @@ int main() {
                 if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
-                    if(i == 172 && j == 590){
+                    if(i == 192 && j == 220){
                         cout << "Testing 3, u = " << u << ", v = " << v << endl;
                         cout << "endTriangle = " << current.endTriangle << endl;
                     }
