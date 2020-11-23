@@ -199,10 +199,7 @@ struct Material{
 
 struct Triangle {
     Vertex vec0, vec1, vec2;
-    vec3 normal{};
-    double d{};
-    Vertex PointOfIntersection;
-    double Tout;
+    vec3 normal;
     Material mat;
 
    // Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
@@ -212,7 +209,7 @@ struct Triangle {
         vec1 = v2;
         vec2 = v3;
         normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
-        d = dot(normal, (vec3)vec0.position);
+        double d = dot(normal, (vec3)vec0.position);
         mat = mat_;
     }
 
@@ -221,7 +218,7 @@ struct Triangle {
         vec1 = v2;
         vec2 = v3;
         normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
-        d = dot(normal, (vec3)vec0.position);
+        double d = dot(normal, (vec3)vec0.position);
         mat = mat_;
         if(dot(normal, (vec3)v4.position) > 0){
             normal = -normal;
@@ -240,11 +237,12 @@ struct Triangle {
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
 
-        if(tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y+tuv.z <=1.0){
-            if(intersectingRay.intersectionPoint.position.x > tuv.x) {
+        if (tuv.x > 0 && tuv.y > 0 && tuv.z > 0 && tuv.y + tuv.z <= 1.0) {
+            if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
                 //Update intersectingRay here
-                if(print){
-                    cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z << endl;
+                if (print) {
+                    cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z
+                         << endl;
                 }
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
@@ -256,15 +254,7 @@ struct Triangle {
         }
     }
 
-    Triangle& operator= (Triangle const &Tri){
-        this->vec0 = Tri.vec0;
-        this->vec1 = Tri.vec1;
-        this->vec2 = Tri.vec2;
-        this->normal = Tri.normal;
-        this->PointOfIntersection = Tri.PointOfIntersection;
-        this->mat = Tri.mat;
-        return *this;
-    }
+    Triangle& operator= (Triangle const &Tri) = default;
 
 };
 
@@ -275,15 +265,19 @@ struct Tetrahedron {
 
     Tetrahedron() {}
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
-        triangles = {Triangle(v1, v2, v3, v4, mat), Triangle(v1, v2, v4, v3,mat), Triangle(v1, v3, v4, v2,mat), Triangle(v2, v3, v4, v1, mat)};
+        triangles = {Triangle(v1, v2, v3, v4, mat), Triangle(v1, v2, v4, v3,mat), Triangle(v1, v3, v4, v2,mat), Triangle(v3, v2, v4, v1, mat)};
     }
 
     bool rayIntersection(Ray& intersectingRay, bool print = false) {
         bool collision = false;
-        for(Triangle tri : triangles) {
-            if(tri.rayIntersection(intersectingRay, print)){
+        //try one var
+        int v = 3; //triangle to check
+        for(int i=v; i < v+1; i++) {
+            Triangle* tri = new Triangle(triangles[i]);
+            if(tri->rayIntersection(intersectingRay, print)){
+            //if(triangles[0].rayIntersection(intersectingRay, print)){
                 intersectingRay.color = mat.color_;
-                intersectingRay.endTriangle = &triangles[0];
+                intersectingRay.endTriangle = tri;
                 collision = true;
             }
         }
@@ -354,8 +348,7 @@ struct Scene {
     Triangle walls[24]{};
     Tetrahedron tetras{};
     Sphere spheres{};
-    //Vertex vertices[14];
-    bool randomRoof;
+    bool randomRoof = false;
     Scene() = default;
 
 
@@ -375,7 +368,7 @@ struct Scene {
             random = distrib(gen);
         }
         tetras.rayIntersection(intersectingRay,print && (random > 0.9999));
-        spheres.sphereRayIntersection(intersectingRay);
+        //spheres.sphereRayIntersection(intersectingRay);
     }
 
     void setRandomRoof(bool b) {
@@ -441,11 +434,10 @@ void createScene(Scene *world){
     Material blue_lam = Material(ColorDbl(0,0,255), LAMBERTIAN);
     Material green_lam = Material(ColorDbl(0,255,0), LAMBERTIAN);
     Material purple_lam = Material(ColorDbl(255,0,255), LAMBERTIAN);
-    Material grey_lam = Material(ColorDbl(204,204,204), LAMBERTIAN);
+    Material grey_lam = Material(ColorDbl(254,254,254), LAMBERTIAN);
     Material yellow_lam = Material(ColorDbl(255,255,0), LAMBERTIAN);
     Material teal_lam = Material(ColorDbl(0,255,255), LAMBERTIAN);
 /*
-    //Roof = Random Grey
     random_device rd;
     mt19937  gen(rd());
     uniform_int_distribution<> distrib(50,200);
@@ -456,6 +448,7 @@ void createScene(Scene *world){
     cout << "Grey value: " << val << endl;
      colors[0] = ColorDbl(val,val,val); */
 
+    //Roof = Grey/white
     world->walls[0] = Triangle(vrtx0r, vrtx1r, vrtx2r, grey_lam);
     world->walls[1] = Triangle(vrtx0r, vrtx2r, vrtx3r, grey_lam);
     world->walls[2] = Triangle(vrtx0r, vrtx3r, vrtx4r, grey_lam);
@@ -503,11 +496,11 @@ void createScene(Scene *world){
 
     //create Tetrahedron
     world->tetras = Tetrahedron(vec3(6,0,-3),
-                                vec3(8,2,-3),
-                                vec3(8,-2,-4),
-                                vec3(7,0,0));
+                                vec3(4,2,-2),
+                                vec3(4,-2,-2),
+                                vec3(4,0,1));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(7,3,0));
+    //world->spheres = Sphere(1,vec3(7,3,0));
 
 }
 
@@ -541,7 +534,9 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{3,-1,1};
+    light.position = vec3{2.5,0,-1.5};            //behind light
+    //light.position = vec3{3,-1,1};              //front light
+    //light.position = cam.getEye().position;
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -551,27 +546,36 @@ int main() {
             int progressPercent = progress*100;
             cout << "Rendering ..." << progressPercent << "%." << endl;
         }
+        if (i == 172){
+            cout << "Testing" << endl;
+        }
         for (int j = 0; j < height; j++) {
+            if(i == 172 && j == 590){
+                cout << "Testing 2" << endl;
+            }
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
                 Ray current{};
                 double dy = distrib(gen);
                 double dz = distrib(gen);
+                dy = dz = 0;
                 current.start = cam.getEye();
 
                 current.end = Vertex(0,
                                      (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, distrib(gen) < .99);
+                world.rayIntersection(current, false);
 
                 Ray shadow{};
                 double u , v;
                 ColorDbl shadowOrNot = {1.0,1.0,1.0};
 
-                bool sph = world.spheres.sphereRayIntersection(current);
+                //bool sph = world.spheres.sphereRayIntersection(current);
+                bool sph = false;
                 //Shadow for triangle objects
                 double distanceToLight;
+
                 if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
@@ -580,52 +584,58 @@ int main() {
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
                     //Move start out of object
-                    shadow.start = (vec3) shadow.start.position + 1.9 * (current.start.position - current.end.position);
+                    shadow.start.position = vec4((vec3) shadow.start.position - 0.00001 * normalize(current.end.position - current.start.position), 1.0);
 
-                    if (shadowOrNot.r < 0 && shadowOrNot.g < 0 && shadowOrNot.b < 0) {
+                    /*random = distrib(gen);
+                    if (random > 0.999) {
                         cout << "Ray index: (" << i << "," << j << ")." << endl;
                         cout << "Current ray end triangle vec0:" << endl <<
                         "x: " << current.endTriangle->vec0.position.x <<
                         " y: " << current.endTriangle->vec0.position.y <<
-                        " z: " << current.endTriangle->vec0.position.z << endl;
-                        cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y
-                             << " z: " << shadow.start.position.z << endl;
-                    }
+                        " z: " << current.endTriangle->vec0.position.z <<
+                        " w: " << current.endTriangle->vec0.position.w << endl;
+                        cout << "Shadow start pos:" << endl << "x: " << shadow.start.position.x << " y: " << shadow.start.position.y
+                             << " z: " << shadow.start.position.z << " w: " << shadow.start.position.w << endl << endl;
+                    }*/
                 }
 
                     //Shadow for implicit objects
                 else if(sph) {
                     random = distrib(gen);
                     shadow.start = Vertex{(vec3) current.intersectionPoint.position + world.spheres.centerOfSphere};
-                    if (random > 0.99) {
+                    /*if (random > 0.99) {
                         cout << "Ray index: (" << i << "," << j << ")." << endl;
                         cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y
                              << " z: " << shadow.start.position.z << endl;
-                    }
+                    }*/
                 }
 
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
-                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0);}
+                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0) ;}
                 if(sph){shadedRay = true;}
                 vec3 dist = shadow.end - shadow.start;
                 distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
 
-                shadowOrNot = (shadedRay) ? ColorDbl{.2,.2,.2} : ColorDbl{1.0, 1.0, 1.0};
+                shadowOrNot = (shadedRay) ? ColorDbl{.1,.1,.1} : ColorDbl{1.0, 1.0, 1.0};
 
-                shadowOrNot *= 1/ distanceToLight;
+                shadowOrNot *= (1.0/ distanceToLight);
                 pixelAvg += (current.color) * shadowOrNot;
 
                 random = distrib(gen);
-                if(random > 0.9999){
-                    //cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y << " z: " << shadow.start.position.z << endl;
-                    //cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< shadedRay <<endl;
-                    //cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
-                    /*cout << "Current triangle color: " << endl << "r: " << current.endTriangle->color.r <<
-                    ", g: " << current.endTriangle->color.g << ", b: " << current.endTriangle->color.b << endl;*/
-                    /*cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
-                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl;*/
+                if(random > 1.9999){
+                    cout << "Ray index: (" << i << "," << j << ")." << endl;
+                    cout << "Shadow start pos:" << endl << "x: " << shadow.start.position.x <<
+                            " y: " << shadow.start.position.y <<
+                            " z: " << shadow.start.position.z <<
+                            " w: " << shadow.start.position.w << endl;
+                    cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< ((shadedRay)?"Yes":"No") << endl;
+                    cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
+                    cout << "Current triangle color: " << endl << "r: " << current.endTriangle->mat.color_.r <<
+                    ", g: " << current.endTriangle->mat.color_.g << ", b: " << current.endTriangle->mat.color_.b << endl;
+                    cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
+                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl << endl;
                 }
                 if(!sph) {
                     if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
