@@ -245,7 +245,6 @@ struct Triangle {
 
         }
         if (tuv.x > 0 && tuv.y >= 0 && tuv.z >= 0 && tuv.y + tuv.z <= (1.000005)) {
-            if(print) cout << "Updating Intersection Ray!" << endl << endl;
             if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
@@ -274,14 +273,10 @@ struct Tetrahedron {
 
     bool rayIntersection(Ray& intersectingRay, bool print = false) {
         bool collision = false;
-        //try one var
-        int v = 3; //triangle to check
-        for(int i=v; i < v+1; i++) {
+        for(int i=0; i < triangles.size(); i++) {
             Triangle* tri = new Triangle(triangles[i]);
             if(tri->rayIntersection(intersectingRay, print)){
-            //if(triangles[0].rayIntersection(intersectingRay, print)){
                 intersectingRay.color = mat.color_;
-                intersectingRay.endTriangle = tri;
                 collision = true;
             }
         }
@@ -496,9 +491,9 @@ void createScene(Scene *world){
 
     //create Tetrahedron
     world->tetras = Tetrahedron(vec3(6,0,-3),
-                                vec3(4,2,-2),
-                                vec3(4,-2,-2),
-                                vec3(4,0,1));
+                                vec3(8,2,-3),
+                                vec3(8,-2,-3),
+                                vec3(7,0,0));
     //Create Sphere
     //world->spheres = Sphere(1,vec3(7,3,0));
 
@@ -534,7 +529,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{2.5,0,-1.5};            //behind light
+    light.position = vec3{5,0,1};            //behind light
     //light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
 
@@ -546,13 +541,7 @@ int main() {
             int progressPercent = progress*100;
             cout << "Rendering ..." << progressPercent << "%." << endl;
         }
-        if (i == 192){
-            cout << "Testing" << endl;
-        }
         for (int j = 0; j < height; j++) {
-            if(i == 192 && j == 220){
-                cout << "Testing 2" << endl;
-            }
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
@@ -565,18 +554,8 @@ int main() {
                 current.end = Vertex(0,
                                      (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, (i == 192 && j == 220));
+                world.rayIntersection(current, false);
 
-                if(i == 192 && j == 218){
-                    cout << "(i,j) = (" << 800 - i << ", " << 800 - j << ")\nCurrent color is R: " << current.endTriangle->mat.color_.r <<
-                         ", G: " << current.endTriangle->mat.color_.g <<
-                         ", B: " << current.endTriangle->mat.color_.b << endl;
-                }
-                if(i == 190 && j == 220){
-                    cout << "(i,j) = (" << 800 - i << ", " << 800 - j << ")\nCurrent color is R: " << current.endTriangle->mat.color_.r <<
-                         ", G: " << current.endTriangle->mat.color_.g <<
-                         ", B: " << current.endTriangle->mat.color_.b << endl;
-                }
                 Ray shadow{};
                 double u , v;
                 ColorDbl shadowOrNot = {1.0,1.0,1.0};
@@ -589,10 +568,6 @@ int main() {
                 if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
-                    if(i == 192 && j == 220){
-                        cout << "Testing 3, u = " << u << ", v = " << v << endl;
-                        cout << "endTriangle = " << current.endTriangle << endl;
-                    }
                     shadow.start = Vertex{(1 - u - v) * current.endTriangle->vec0.position +
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
