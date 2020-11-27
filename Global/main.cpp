@@ -497,6 +497,12 @@ void createScene(Scene *world){
 
 }
 
+/*  TODO:
+ *  1. Reflection rays
+ *  2. Perfect reflection objects
+ *
+ *
+*/
 
 int main() {
     cout << "This is the start of our RayTracer!" << endl;
@@ -530,8 +536,8 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{12,0,-2};            //behind light
-    //light.position = vec3{3,-1,1};              //front light
+    //light.position = vec3{12,0,-2};            //behind light
+    light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
 
 
