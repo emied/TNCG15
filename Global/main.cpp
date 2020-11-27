@@ -15,6 +15,7 @@ struct ColorDbl{
 
     double r, g, b;
     ColorDbl(): r(0.0), g(0.0), b(0.0) {} //default constructor
+    ColorDbl(double intensity): r(intensity), g(intensity), b(intensity){}
     ColorDbl(double red, double green, double blue) : r(red), g(green), b(blue){}
     ColorDbl(vec3 color)
     {
@@ -355,7 +356,6 @@ struct Scene {
         uniform_real_distribution<> distrib(0, 1.0);
         double random;
         for(int i = 0; i < 24 ;i++){
-
             if ((i == 18 || i == 19 || i == 9) && print) cout << "Checking wall i = " << i << endl;
             if(walls[i].rayIntersection(intersectingRay,((i == 18 || i == 19 || i == 9) && print))){break;}
         }
@@ -527,22 +527,9 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{5,0,1};            //behind light
+    light.position = vec3{12,0,-2};            //behind light
     //light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
-
-    cout << "Wall normals:" << endl;
-    for(int i = 0; i < 24; i++){
-        vec3 current = world.walls[i].normal;
-        cout << "Wall " << i << "\nx: " << current.x << ", y: " << current.y << ", z: " << current.z << endl;
-    }
-    cout << "Tetra normals: " << endl;
-    int i = 0;
-    for(Triangle tri : world.tetras.triangles){
-        vec3 current = tri.normal;
-        cout << "Tetra-triangle " << i++ << "\nx: " << current.x << ", y: " << current.y << ", z: " << current.z << endl;
-    }
-    return 0;
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -574,7 +561,7 @@ int main() {
                 bool sph = world.spheres.sphereRayIntersection(current);
                 //Shadow for triangle objects
                 double distanceToLight;
-
+                // TODO: ADD normal comparison for optimization.
                 if (!sph) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
@@ -613,16 +600,17 @@ int main() {
                 bool shadedRay;
                 if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON && shadow.intersectionPoint.position.x >= 0) ;}
                 else {shadedRay = true;}
-                vec3 dist = shadow.end - shadow.start;
-                distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
+                distanceToLight = length(shadow.end - shadow.start);
+                double indirectLight = 0.1;
+                double directLight = 1;
+                shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
-                shadowOrNot = (shadedRay) ? ColorDbl{.1,.1,.1} : ColorDbl{1.0, 1.0, 1.0};
-
-                shadowOrNot *= (1.0/ distanceToLight);
+                shadowOrNot *= (1.0/ pow(distanceToLight,2));
                 pixelAvg += (current.color) * shadowOrNot;
 
+
                 random = distrib(gen);
-                if(random > 1.9999){
+                if(false){
                     cout << "Ray index: (" << i << "," << j << ")." << endl;
                     cout << "Shadow start pos:" << endl << "x: " << shadow.start.position.x <<
                             " y: " << shadow.start.position.y <<
