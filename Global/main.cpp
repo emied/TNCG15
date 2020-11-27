@@ -595,7 +595,7 @@ int main() {
                 }
 
                     //Shadow for implicit objects
-                else if(sph) {
+                else {
                     random = distrib(gen);
                     shadow.start = Vertex{(vec3) current.intersectionPoint.position + world.spheres.centerOfSphere};
                     /*if (random > 0.99) {
