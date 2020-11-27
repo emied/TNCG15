@@ -209,7 +209,6 @@ struct Triangle {
         vec1 = v2;
         vec2 = v3;
         normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
-        double d = dot(normal, (vec3)vec0.position);
         mat = mat_;
     }
 
@@ -217,8 +216,7 @@ struct Triangle {
         vec0 = v1;
         vec1 = v2;
         vec2 = v3;
-        normal = cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position));
-        double d = dot(normal, (vec3)vec0.position);
+        normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
         mat = mat_;
         if(dot(normal, (vec3)v4.position) > 0){
             normal = -normal;
@@ -462,7 +460,7 @@ void createScene(Scene *world){
     //Walls
     //Wall 1 = Red
     world->walls[12] = Triangle(vrtx2r, vrtx1r, vrtx2f, red_lam);
-    world->walls[13] = Triangle(vrtx1f, vrtx1r, vrtx2f, red_lam);
+    world->walls[13] = Triangle(vrtx1f, vrtx2f, vrtx1r, red_lam);
 
     //Wall 2 = Yellow
     world->walls[14] = Triangle(vrtx3r, vrtx2r, vrtx3f, yellow_lam);
@@ -532,6 +530,19 @@ int main() {
     light.position = vec3{5,0,1};            //behind light
     //light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
+
+    cout << "Wall normals:" << endl;
+    for(int i = 0; i < 24; i++){
+        vec3 current = world.walls[i].normal;
+        cout << "Wall " << i << "\nx: " << current.x << ", y: " << current.y << ", z: " << current.z << endl;
+    }
+    cout << "Tetra normals: " << endl;
+    int i = 0;
+    for(Triangle tri : world.tetras.triangles){
+        vec3 current = tri.normal;
+        cout << "Tetra-triangle " << i++ << "\nx: " << current.x << ", y: " << current.y << ", z: " << current.z << endl;
+    }
+    return 0;
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
