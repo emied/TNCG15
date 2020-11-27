@@ -548,7 +548,7 @@ int main() {
                 Ray current{};
                 double dy = distrib(gen);
                 double dz = distrib(gen);
-                dy = dz = 0;
+                //dy = dz = 0;      //disable random rays
                 current.start = cam.getEye();
 
                 current.end = Vertex(0,
