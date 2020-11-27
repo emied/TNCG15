@@ -579,7 +579,7 @@ int main() {
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
                     //Move start out of object
-                    shadow.start.position = vec4((vec3) shadow.start.position - 0.00001 * normalize(current.end.position - current.start.position), 1.0);
+
 
                     /*random = distrib(gen);
                     if (random > 0.999) {
@@ -604,7 +604,7 @@ int main() {
                              << " z: " << shadow.start.position.z << endl;
                     }*/
                 }
-
+                shadow.start.position = vec4((vec3) shadow.start.position - 0.00001 * normalize(current.end.position - current.start.position), 1.0);
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
