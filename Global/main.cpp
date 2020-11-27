@@ -495,7 +495,7 @@ void createScene(Scene *world){
                                 vec3(8,-2,-3),
                                 vec3(7,0,0));
     //Create Sphere
-    //world->spheres = Sphere(1,vec3(7,3,0));
+    world->spheres = Sphere(1,vec3(7,3,0));
 
 }
 
@@ -560,8 +560,7 @@ int main() {
                 double u , v;
                 ColorDbl shadowOrNot = {1.0,1.0,1.0};
 
-                //bool sph = world.spheres.sphereRayIntersection(current);
-                bool sph = false;
+                bool sph = world.spheres.sphereRayIntersection(current);
                 //Shadow for triangle objects
                 double distanceToLight;
 
@@ -602,7 +601,7 @@ int main() {
                 world.rayIntersection(shadow);
                 bool shadedRay;
                 if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON && shadow.intersectionPoint.position.x >= 0) ;}
-                if(sph){shadedRay = true;}
+                else {shadedRay = true;}
                 vec3 dist = shadow.end - shadow.start;
                 distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
 
