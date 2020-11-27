@@ -523,6 +523,9 @@ int main() {
     mt19937 gen(rd());
     uniform_real_distribution<> distrib(0, 1.0);
     time_t timer;
+    double indirectLight = 0.1;
+    double directLight = 1;
+
 
     //Add point light
     LightSource light;
@@ -530,6 +533,7 @@ int main() {
     light.position = vec3{12,0,-2};            //behind light
     //light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
+
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
@@ -601,8 +605,6 @@ int main() {
                 if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON && shadow.intersectionPoint.position.x >= 0) ;}
                 else {shadedRay = true;}
                 distanceToLight = length(shadow.end - shadow.start);
-                double indirectLight = 0.1;
-                double directLight = 1;
                 shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
                 shadowOrNot *= (1.0/ pow(distanceToLight,2));
