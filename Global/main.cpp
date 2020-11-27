@@ -244,9 +244,9 @@ struct Triangle {
                                                                 ", z = " << intersectingRay.intersectionPoint.position.z << endl;
 
         }
-        if (tuv.x > 0 && tuv.y >= 0 && tuv.z >= 0 && tuv.y + tuv.z <= 1.0) {
+        if (tuv.x > 0 && tuv.y >= 0 && tuv.z >= 0 && tuv.y + tuv.z <= (1.000005)) {
+            if(print) cout << "Updating Intersection Ray!" << endl << endl;
             if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
-                if(print) cout << "Updating Intersection Ray!" << endl << endl;
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
@@ -626,7 +626,7 @@ int main() {
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
-                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 && shadow.intersectionPoint.position.x >= 0) ;}
+                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON && shadow.intersectionPoint.position.x >= 0) ;}
                 if(sph){shadedRay = true;}
                 vec3 dist = shadow.end - shadow.start;
                 distanceToLight = sqrt(pow(dist.x, 2) + pow(dist.y, 2) + pow(dist.z, 2));
