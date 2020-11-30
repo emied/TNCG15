@@ -323,8 +323,6 @@ struct Sphere{
     //inspired by
     //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
     bool rayIntersection(Ray& ray, bool print = false) {
-        double t = DBL_MAX;
-        double r = rad;
         vec3 direction = normalize(vec3(ray.end-ray.start));
         vec3 L = centerOfSphere - (vec3) ray.start.position;
 
@@ -332,9 +330,8 @@ struct Sphere{
 
         if (tca < DBL_EPSILON) return false;
 
-        double tcaSquared = (tca * tca);
-        double radiusSquared = (r * r);
-        float dsquared = dot(L, L) - tcaSquared;
+        double radiusSquared = (rad * rad);
+        double dsquared = dot(L, L) - (tca * tca);
 
         if (radiusSquared < dsquared) return false;     //check if ray hits sphere
 
@@ -345,9 +342,9 @@ struct Sphere{
 
         if (t0 > t1) swap(t0, t1);
 
-        if (t0 < DBL_EPSILON) {
+        if (t0 < 0) {
             t0 = t1;
-            if (t0 < DBL_EPSILON) {
+            if (t0 < 0) {
                 return false;
             }
         }
@@ -357,10 +354,10 @@ struct Sphere{
             ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
             ray.color = mat.color_;
             ray.sphereIntersection = true;
-            if (print) {
+            /*if (print) {
                 cout << "Hit! Intersection point:\nx: " << to_string(ray.intersectionPoint.position) <<
                         "\ncolor = " << to_string(ray.color) << endl;
-            }
+            }*/
             return true;
         }
         return false;
@@ -569,8 +566,8 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    //light.position = vec3{12,0,-2};                      //behind light
-    light.position = vec3{3,-1,1};              //front light
+    light.position = vec3{7,5,0};                      //behind light
+    //light.position = vec3{5,-2,2.5};              //front light
     //light.position = cam.getEye().position;
 
 
@@ -625,6 +622,11 @@ int main() {
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
+
+                if (i == 576 && j == 402) {
+                    cout << "sphereintersection: " << current.sphereIntersection << endl;
+                }
+
                 shadedRay = shadow.sphereIntersection || (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
                                                           shadow.intersectionPoint.position.x >= 0);
                 distanceToLight = length(shadow.end - shadow.start);
@@ -633,16 +635,9 @@ int main() {
                 shadowOrNot *= (1.0 / pow(distanceToLight, 2));
                 pixelAvg += (current.color) * shadowOrNot;
 
-
-                if (i == 576 && j == 402) {
-                    cout << "shadedray: " << shadedRay << endl;
-                    cout << "sphereintersection: " << current.sphereIntersection << endl;
-                }
-
                 if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
                 if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
-
             }
             pixelAvg /= raysPerPixel;
             cam.image[i * width + j] = Pixel(pixelAvg);
