@@ -625,12 +625,8 @@ int main() {
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
-                if (!current.sphereIntersection) {
-                    shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
-                                 shadow.intersectionPoint.position.x >= 0);
-                }
-                else { shadedRay = shadow.sphereIntersection || (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
-                                                             shadow.intersectionPoint.position.x >= 0); }
+                shadedRay = shadow.sphereIntersection || (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
+                                                          shadow.intersectionPoint.position.x >= 0);
                 distanceToLight = length(shadow.end - shadow.start);
                 shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
