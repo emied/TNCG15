@@ -354,7 +354,7 @@ struct Sphere{
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
 
-            ray.intersectionPoint = (ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
+            ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
             ray.color = mat.color_;
             ray.sphereIntersection = true;
             if (print) {
