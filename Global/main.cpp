@@ -2,6 +2,7 @@
 #include "../glm/glm/glm.hpp"
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include <random>
 #include <list>
 #include <string>
@@ -64,7 +65,26 @@ struct ColorDbl{
         b *= scalar;
         return *this;
     }
+
 };
+
+string to_string(ColorDbl color){
+    ostringstream res{};
+    res << "R: " << color.r << ", G: " << color.g << ", B: " << color.b;
+    return res.str();
+}
+
+string to_string(vec4 vector){
+    ostringstream res{};
+    res << "x: " << vector.x << ", y: " << vector.y << ", z: " << vector.z << ", w: " << vector.w;
+    return res.str();
+}
+
+string to_string(vec3 vector){
+    ostringstream res{};
+    res << "x: " << vector.x << ", y: " << vector.y << ", z: " << vector.z;
+    return res.str();
+}
 
 ColorDbl operator*(ColorDbl const& color, double scalar){
     ColorDbl ret{};
@@ -160,12 +180,13 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
-    Ray() : start{}, end{}, endTriangle{} {}
+    Ray() : start{}, end{}, endTriangle{}, sphereIntersection(false){}
     Ray(Vertex vertex1, Vertex vertex2) {
         start = vertex1;
         end = vertex2;
         endTriangle = nullptr;
         direction.direction = normalize(vertex2 - vertex1);
+        sphereIntersection = false;
     }
 
     Ray(Vertex startP, Direction dir )
@@ -173,6 +194,7 @@ struct Ray {
         start = startP;
         endTriangle = nullptr;
         direction = dir;
+        sphereIntersection = false;
     }
 
     Vertex start, end;
@@ -180,6 +202,7 @@ struct Ray {
     Triangle* endTriangle;
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
     Direction direction;
+    bool sphereIntersection;
 };
 
 enum Type {
@@ -249,6 +272,7 @@ struct Triangle {
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
                 intersectingRay.color = this->mat.color_;
+                intersectingRay.sphereIntersection = false;
             }
             return true;
         } else {
@@ -298,39 +322,48 @@ struct Sphere{
 
     //inspired by
     //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
-    bool sphereRayIntersection(Ray& ray){
+    bool rayIntersection(Ray& ray, bool print = false) {
         double t = DBL_MAX;
         double r = rad;
-        vec3 direction = normalize(vec3(ray.end - ray.start));
-        vec3 L = centerOfSphere - direction;
+        vec3 direction = normalize(vec3(ray.end-ray.start));
+        vec3 L = centerOfSphere - (vec3) ray.start.position;
 
-        double tca = dot((L), direction);
+        double tca = dot(L, direction);
 
-        if(tca < EPSILON) return false;
+        if (tca < DBL_EPSILON) return false;
 
-        double tcaSquared = (tca*tca);
-        double radiusSquared = (r*r);
+        double tcaSquared = (tca * tca);
+        double radiusSquared = (r * r);
         float dsquared = dot(L, L) - tcaSquared;
 
-        if(radiusSquared < dsquared) return false;     //check if ray hits sphere
+        if (radiusSquared < dsquared) return false;     //check if ray hits sphere
 
         double thc = sqrt(radiusSquared - dsquared);
 
-        double t0 = tca-thc;
-        double t1 = tca+thc;
+        double t0 = tca - thc;
+        double t1 = tca + thc;
 
-        if(t0 > t1) swap(t0,t1);
+        if (t0 > t1) swap(t0, t1);
 
-        if(t0 < EPSILON && t1 < EPSILON){
-            return false;
+        if (t0 < DBL_EPSILON) {
+            t0 = t1;
+            if (t0 < DBL_EPSILON) {
+                return false;
+            }
         }
+        if (ray.intersectionPoint.position.x > t0) {
+            //Hit!
 
-        ray.intersectionPoint = (ray.start.position.x,ray.start.position.y,ray.start.position.z) + direction;
-        //hit
-        t = t0;
-        float f = (float) t;
-        ray.color = mat.color_;
-        return true;
+            ray.intersectionPoint = (ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
+            ray.color = mat.color_;
+            ray.sphereIntersection = true;
+            if (print) {
+                cout << "Hit! Intersection point:\nx: " << to_string(ray.intersectionPoint.position) <<
+                        "\ncolor = " << to_string(ray.color) << endl;
+            }
+            return true;
+        }
+        return false;
 
     }
 
@@ -350,18 +383,17 @@ struct Scene {
     Scene() = default;
 
 
-    void rayIntersection(Ray& intersectingRay, bool print = false){
+    void rayIntersection(Ray& intersectingRay, bool print = false) {
         random_device rd;
         mt19937 gen(rd());
         uniform_real_distribution<> distrib(0, 1.0);
         double random;
-        for(int i = 0; i < 24 ;i++){
-            if ((i == 18 || i == 19 || i == 9) && print) cout << "Checking wall i = " << i << endl;
-            if(walls[i].rayIntersection(intersectingRay,((i == 18 || i == 19 || i == 9) && print))){break;}
+        for (int i = 0; i < 24; i++) {
+            if (walls[i].rayIntersection(intersectingRay)) { break; }
         }
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
-        tetras.rayIntersection(intersectingRay,print);
-        //spheres.sphereRayIntersection(intersectingRay);
+        tetras.rayIntersection(intersectingRay);
+        spheres.rayIntersection(intersectingRay, print);
     }
 
     void setRandomRoof(bool b) {
@@ -430,16 +462,16 @@ void createScene(Scene *world){
     Material grey_lam = Material(ColorDbl(254,254,254), LAMBERTIAN);
     Material yellow_lam = Material(ColorDbl(255,255,0), LAMBERTIAN);
     Material teal_lam = Material(ColorDbl(0,255,255), LAMBERTIAN);
-/*
+
     random_device rd;
     mt19937  gen(rd());
-    uniform_int_distribution<> distrib(50,200);
-    int val = 50;
+    uniform_int_distribution<> distrib(50,150);
+    int val = 254;
     if(world->randomRoof){
         val = distrib ( gen);
     }
     cout << "Grey value: " << val << endl;
-     colors[0] = ColorDbl(val,val,val); */
+    grey_lam.color_ = ColorDbl(val);
 
     //Roof = Grey/white
     world->walls[0] = Triangle(vrtx0r, vrtx1r, vrtx2r, grey_lam);
@@ -500,8 +532,8 @@ void createScene(Scene *world){
 /*  TODO:
  *  1. Reflection rays
  *  2. Perfect reflection objects
- *
- *
+ *  3. Sphere shading
+ *  4. Add object type to ray
 */
 
 int main() {
@@ -518,7 +550,7 @@ int main() {
     const double pixelSize = 2.0 / width;
     Camera cam{Vertex(-2, 0, 0), Vertex(-1, 0, 0), width, height};
     cam.setPerspective(false);
-    world.setRandomRoof(true);      //Use this to select if roof color randoms between runs.
+    world.setRandomRoof(false);      //Use this to select if roof color randoms between runs.
 
     image img{width, height};
 
@@ -531,12 +563,13 @@ int main() {
     time_t timer;
     double indirectLight = 0.1;
     double directLight = 1;
+    bool randomRays = false;            //Select if ray directions are randomized/dithered
 
 
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    //light.position = vec3{12,0,-2};            //behind light
+    //light.position = vec3{12,0,-2};                      //behind light
     light.position = vec3{3,-1,1};              //front light
     //light.position = cam.getEye().position;
 
@@ -554,88 +587,66 @@ int main() {
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
                 Ray current{};
-                double dy = distrib(gen);
-                double dz = distrib(gen);
-                //dy = dz = 0;      //disable random rays
+                double dy = (randomRays) ? distrib(gen) : 0;
+                double dz = (randomRays) ? distrib(gen) : 0;
                 current.start = cam.getEye();
 
                 current.end = Vertex(0,
-                                     (i - 400 + (double)(r%subPixelsPerAxis)/(double)subPixelsPerAxis + dy/subPixelsPerAxis) * pixelSize,
-                                     (j - 400 + floor(r/subPixelsPerAxis)/subPixelsPerAxis + dz/subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, false);
+                                     (i - 400 + (double) (r % subPixelsPerAxis) / (double) subPixelsPerAxis +
+                                      dy / subPixelsPerAxis) * pixelSize,
+                                     (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
+                                      dz / subPixelsPerAxis) * pixelSize);
+                world.rayIntersection(current, (i == 576 && j == 402));
 
                 Ray shadow{};
-                double u , v;
-                ColorDbl shadowOrNot = {1.0,1.0,1.0};
+                double u, v;
+                ColorDbl shadowOrNot = {1.0, 1.0, 1.0};
 
-                bool sph = world.spheres.sphereRayIntersection(current);
                 //Shadow for triangle objects
                 double distanceToLight;
                 // TODO: ADD normal comparison for optimization.
-                if (!sph) {
+                if (!current.sphereIntersection) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
                     shadow.start = Vertex{(1 - u - v) * current.endTriangle->vec0.position +
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
-                    //Move start out of object
 
 
-                    /*random = distrib(gen);
-                    if (random > 0.999) {
-                        cout << "Ray index: (" << i << "," << j << ")." << endl;
-                        cout << "Current ray end triangle vec0:" << endl <<
-                        "x: " << current.endTriangle->vec0.position.x <<
-                        " y: " << current.endTriangle->vec0.position.y <<
-                        " z: " << current.endTriangle->vec0.position.z <<
-                        " w: " << current.endTriangle->vec0.position.w << endl;
-                        cout << "Shadow start pos:" << endl << "x: " << shadow.start.position.x << " y: " << shadow.start.position.y
-                             << " z: " << shadow.start.position.z << " w: " << shadow.start.position.w << endl << endl;
-                    }*/
                 }
 
                     //Shadow for implicit objects
                 else {
-                    random = distrib(gen);
-                    shadow.start = Vertex{(vec3) current.intersectionPoint.position + world.spheres.centerOfSphere};
-                    /*if (random > 0.99) {
-                        cout << "Ray index: (" << i << "," << j << ")." << endl;
-                        cout << "Shadow start pos, x: " << shadow.start.position.x << " y: " << shadow.start.position.y
-                             << " z: " << shadow.start.position.z << endl;
-                    }*/
+                    shadow.start = Vertex{(vec3) current.intersectionPoint.position};
                 }
-                shadow.start.position = vec4((vec3) shadow.start.position - 0.00001 * normalize(current.end.position - current.start.position), 1.0);
+                //Move start out of object
+                shadow.start.position = vec4((vec3) shadow.start.position -
+                                             0.00001 * normalize(current.end.position - current.start.position), 1.0);
                 shadow.end = light.position;
                 world.rayIntersection(shadow);
                 bool shadedRay;
-                if(!sph){shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON && shadow.intersectionPoint.position.x >= 0) ;}
-                else {shadedRay = true;}
+                if (!current.sphereIntersection) {
+                    shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
+                                 shadow.intersectionPoint.position.x >= 0);
+                }
+                else { shadedRay = shadow.sphereIntersection || (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
+                                                             shadow.intersectionPoint.position.x >= 0); }
                 distanceToLight = length(shadow.end - shadow.start);
                 shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
-                shadowOrNot *= (1.0/ pow(distanceToLight,2));
+                shadowOrNot *= (1.0 / pow(distanceToLight, 2));
                 pixelAvg += (current.color) * shadowOrNot;
 
 
-                random = distrib(gen);
-                if(false){
-                    cout << "Ray index: (" << i << "," << j << ")." << endl;
-                    cout << "Shadow start pos:" << endl << "x: " << shadow.start.position.x <<
-                            " y: " << shadow.start.position.y <<
-                            " z: " << shadow.start.position.z <<
-                            " w: " << shadow.start.position.w << endl;
-                    cout << "Shaded ray t-value: " << shadow.intersectionPoint.position.x << ", shaded? = "<< ((shadedRay)?"Yes":"No") << endl;
-                    cout << "shadowOrNot  " << shadowOrNot.r << " " << shadowOrNot.g << " " << shadowOrNot.b << endl;
-                    cout << "Current triangle color: " << endl << "r: " << current.endTriangle->mat.color_.r <<
-                    ", g: " << current.endTriangle->mat.color_.g << ", b: " << current.endTriangle->mat.color_.b << endl;
-                    cout << "Collision triangle  normal: " << endl << "x: " << current.endTriangle->normal.x <<
-                    ", y: " << current.endTriangle->normal.y << ", z: " << current.endTriangle->normal.z << endl << endl;
+                if (i == 576 && j == 402) {
+                    cout << "shadedray: " << shadedRay << endl;
+                    cout << "sphereintersection: " << current.sphereIntersection << endl;
                 }
-                if(!sph) {
-                    if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
-                    if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
-                    if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
-                }
+
+                if (current.color.r > maxIntensity) { maxIntensity = current.color.r; }
+                if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
+                if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
+
             }
             pixelAvg /= raysPerPixel;
             cam.image[i * width + j] = Pixel(pixelAvg);
