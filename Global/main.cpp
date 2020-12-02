@@ -351,15 +351,13 @@ struct Sphere{
 
         if (t0 > t1) swap(t0, t1);
 
-        if (t0 < 0) {
+        if (t0 < DBL_EPSILON) {
             t0 = t1;
-            if (t0 < 0) {
+            if (t0 < DBL_EPSILON) {
                 return false;
             }
         }
-        if(print){
-            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
-        }
+        if(print) cout << "Current x value is: " << ray.intersectionPoint.position.x << " compares to t: " << t0 << endl;
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
 
@@ -372,6 +370,9 @@ struct Sphere{
                         "\ncolor = " << to_string(ray.color) << endl;
             }*/
             return true;
+        }
+        if(print){
+            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
         }
         return false;
 
@@ -580,7 +581,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{7,5,0};                      //behind light
+    light.position = vec3{7,-5,0};                      //behind light
     //light.position = vec3{5,-2,2.5};              //front light
     //light.position = cam.getEye().position;
 
@@ -632,7 +633,7 @@ int main() {
                 }
                 //Move start out of object
                 shadow.start.position = vec4((vec3) shadow.start.position -
-                                             0.00001 * normalize(current.end.position - current.start.position), 1.0);
+                                             0.0001 * normalize(current.end.position - current.start.position), 1.0);
                 shadow.end = light.position;
                 world.rayIntersection(shadow, (i == 700 && j == 400));
                 bool shadedRay;
