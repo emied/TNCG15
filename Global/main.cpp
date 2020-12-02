@@ -86,6 +86,15 @@ string to_string(vec3 vector){
     return res.str();
 }
 
+ColorDbl sqrt(ColorDbl input){
+    ColorDbl res;
+    res.r = sqrt(input.r);
+    res.g = sqrt(input.g);
+    res.b = sqrt(input.b);
+    return res;
+
+}
+
 ColorDbl operator*(ColorDbl const& color, double scalar){
     ColorDbl ret{};
     ret.r = color.r*scalar;
@@ -348,10 +357,14 @@ struct Sphere{
                 return false;
             }
         }
+        if(print){
+            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
+        }
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
 
             ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
+            ray.intersectionPoint.position.w = t0;
             ray.color = mat.color_;
             ray.sphereIntersection = true;
             /*if (print) {
@@ -561,6 +574,7 @@ int main() {
     double indirectLight = 0.1;
     double directLight = 1;
     bool randomRays = false;            //Select if ray directions are randomized/dithered
+    bool brightSpots = true;           //Are there bright spots in scene?
 
 
     //Add point light
@@ -593,7 +607,7 @@ int main() {
                                       dy / subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
                                       dz / subPixelsPerAxis) * pixelSize);
-                world.rayIntersection(current, (i == 576 && j == 402));
+                world.rayIntersection(current, false);
 
                 Ray shadow{};
                 double u, v;
@@ -620,15 +634,20 @@ int main() {
                 shadow.start.position = vec4((vec3) shadow.start.position -
                                              0.00001 * normalize(current.end.position - current.start.position), 1.0);
                 shadow.end = light.position;
-                world.rayIntersection(shadow);
+                world.rayIntersection(shadow, (i == 700 && j == 400));
                 bool shadedRay;
 
-                if (i == 576 && j == 402) {
-                    cout << "sphereintersection: " << current.sphereIntersection << endl;
-                }
+                if (i == 700 && j == 400) {
+                    cout << "sphereintersection: " << shadow.sphereIntersection << endl;
 
-                shadedRay = shadow.sphereIntersection || (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
-                                                          shadow.intersectionPoint.position.x >= 0);
+                }
+                if(shadow.sphereIntersection) {
+                    shadedRay = shadow.intersectionPoint.position.w <= 1.0 + DBL_EPSILON &&
+                                shadow.intersectionPoint.position.w >= 0;
+                } else {
+                    shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
+                                 shadow.intersectionPoint.position.x >= 0);
+                }
                 distanceToLight = length(shadow.end - shadow.start);
                 shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
@@ -639,6 +658,7 @@ int main() {
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
                 if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
             }
+            if(brightSpots) pixelAvg = sqrt(pixelAvg);
             pixelAvg /= raysPerPixel;
             cam.image[i * width + j] = Pixel(pixelAvg);
         }
@@ -646,6 +666,7 @@ int main() {
     seconds = time(&timer) - seconds;
     cout << "Rendering ...100%" << ", rendering took " << seconds << " seconds." << endl;
 
+    if(brightSpots) maxIntensity = sqrt(maxIntensity);
     //write cam.image to output img
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
