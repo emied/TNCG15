@@ -358,6 +358,7 @@ struct Sphere{
             }
         }
         if(print) cout << "Current x value is: " << ray.intersectionPoint.position.x << " compares to t: " << t0 << endl;
+        if(print) cout << "Current ray start is: " << to_string(ray.start.position) << "\nRay end: " << to_string(ray.end.position) << endl;
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
 
