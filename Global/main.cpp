@@ -332,10 +332,11 @@ struct Sphere{
     //inspired by
     //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
     bool rayIntersection(Ray& ray, bool print = false) {
-        vec3 direction = normalize(vec3(ray.end-ray.start));
+        vec3 direction = vec3(ray.end - ray.start);
+        vec3 normDirection = normalize(direction);
         vec3 L = centerOfSphere - (vec3) ray.start.position;
 
-        double tca = dot(L, direction);
+        double tca = dot(L, normDirection);
 
         if (tca < DBL_EPSILON) return false;
 
@@ -357,12 +358,58 @@ struct Sphere{
                 return false;
             }
         }
-        if(print) cout << "Current x value is: " << ray.intersectionPoint.position.x << " compares to t: " << t0 << endl;
-        if(print) cout << "Current ray start is: " << to_string(ray.start.position) << "\nRay end: " << to_string(ray.end.position) << endl;
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
 
-            ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0*direction;
+            ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0 * normDirection;
+            ray.intersectionPoint.position.w = t0;
+            ray.color = mat.color_;
+            ray.sphereIntersection = true;
+            /*if (print) {
+                cout << "Hit! Intersection point:\nx: " << to_string(ray.intersectionPoint.position) <<
+                        "\ncolor = " << to_string(ray.color) << endl;
+            }*/
+            return true;
+        }
+        if(print){
+            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
+        }
+        return false;
+
+    }
+
+    bool rayShadowIntersection(Ray& ray, bool print = false) {
+        vec3 direction = vec3(ray.end - ray.start);
+        vec3 normDirection = normalize(direction);
+        vec3 L = centerOfSphere - (vec3) ray.start.position;
+
+        double tca = dot(L, normDirection);
+
+        if (tca < DBL_EPSILON) return false;
+
+        double radiusSquared = (rad * rad);
+        double dsquared = dot(L, L) - (tca * tca);
+
+        if (radiusSquared < dsquared) return false;     //check if ray hits sphere
+
+        double thc = sqrt(radiusSquared - dsquared);
+
+        double t0 = tca - thc;
+        double t1 = tca + thc;
+
+        if (t0 > t1) swap(t0, t1);
+
+        if (t0 < DBL_EPSILON) {
+            t0 = t1;
+            if (t0 < DBL_EPSILON) {
+                return false;
+            }
+        }
+        t0 = t0/length(direction);
+        if (ray.intersectionPoint.position.x > t0) {
+            //Hit!
+
+            ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0 * normDirection;
             ray.intersectionPoint.position.w = t0;
             ray.color = mat.color_;
             ray.sphereIntersection = true;
@@ -406,6 +453,20 @@ struct Scene {
         //tetras.rayIntersection(intersectingRay, random > 0.9999);
         tetras.rayIntersection(intersectingRay);
         spheres.rayIntersection(intersectingRay, print);
+    }
+
+
+    void rayShadowIntersection(Ray& intersectingRay, bool print = false) {
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<> distrib(0, 1.0);
+        double random;
+        for (int i = 0; i < 24; i++) {
+            if (walls[i].rayIntersection(intersectingRay)) { break; }
+        }
+        //tetras.rayIntersection(intersectingRay, random > 0.9999);
+        tetras.rayIntersection(intersectingRay);
+        spheres.rayShadowIntersection(intersectingRay, print);
     }
 
     void setRandomRoof(bool b) {
@@ -544,8 +605,6 @@ void createScene(Scene *world){
 /*  TODO:
  *  1. Reflection rays
  *  2. Perfect reflection objects
- *  3. Sphere shading
- *  4. Add object type to ray
 */
 
 int main() {
@@ -582,7 +641,7 @@ int main() {
     //Add point light
     LightSource light;
     light.color = vec3{1.0,1.0,1.0};
-    light.position = vec3{7,-5,0};                      //behind light
+    light.position = vec3{7,-3,0};                      //behind light
     //light.position = vec3{5,-2,2.5};              //front light
     //light.position = cam.getEye().position;
 
@@ -617,15 +676,12 @@ int main() {
 
                 //Shadow for triangle objects
                 double distanceToLight;
-                // TODO: ADD normal comparison for optimization.
                 if (!current.sphereIntersection) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
                     shadow.start = Vertex{(1 - u - v) * current.endTriangle->vec0.position +
                                           u * current.endTriangle->vec1.position +
                                           v * current.endTriangle->vec2.position};
-
-
                 }
 
                     //Shadow for implicit objects
@@ -636,7 +692,7 @@ int main() {
                 shadow.start.position = vec4((vec3) shadow.start.position -
                                              0.0001 * normalize(current.end.position - current.start.position), 1.0);
                 shadow.end = light.position;
-                world.rayIntersection(shadow, (i == 700 && j == 400));
+                world.rayShadowIntersection(shadow, (i == 700 && j == 400));
                 bool shadedRay;
 
                 if (i == 700 && j == 400) {
