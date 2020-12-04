@@ -180,7 +180,7 @@ struct Vertex {
 
 struct Direction {
     vec3 direction;
-    //Direction(): direction(vec3{}) {}
+    Direction(): direction(vec3{}) {}
     Direction(Vertex in) : direction(in.position){}
 
 };
@@ -188,8 +188,8 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
-    Ray() : start{}, end{}, endTriangle{}, sphereIntersection(false), direction(normalize(end - start)){}
-    Ray(Vertex vertex1, Vertex vertex2) : direction(normalize(vertex2 - vertex1)){
+    Ray() : start{}, end{}, endTriangle{}, sphereIntersection(false), direction(){}
+    Ray(Vertex vertex1, Vertex vertex2) : direction(vertex2 - vertex1){
         start = vertex1;
         end = vertex2;
         endTriangle = nullptr;
@@ -209,6 +209,10 @@ struct Ray {
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
     Direction direction;
     bool sphereIntersection;
+
+    void calculateDirection() {
+        direction.direction = end-start;
+    }
 };
 
 enum Type {
@@ -441,28 +445,41 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay, bool print = false) {
-
+        if (print) cout << "Checking walls" << endl;
         for (int i = 0; i < 24; i++) {
+            if(print) cout << i << endl;
             if (walls[i].rayIntersection(intersectingRay)) {
                 break;
             }
         }
+        if(print) cout << "Walls done" << endl;
         if(tetras.rayIntersection(intersectingRay)) {
-            Ray reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
-            intersectingRay.color = reflectedRay.color;
+            if(print) cout << intersectingRay.endTriangle << endl;
+            Ray reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal, print);
+            intersectingRay.color = reflectedRay.color * 0.8;
 
+        }
+        if(print){
+            cout << "walls and tetra done" << endl;
         }
         if(spheres.rayIntersection(intersectingRay, print)){
             Ray reflectedRay = reflectRay(intersectingRay,spheres.getSphereNormal(intersectingRay.end));
+            intersectingRay.color = reflectedRay.color * 0.8;
+            //cout << "Sphere Normal: " << to_string(spheres.getSphereNormal(intersectingRay.end)) << endl;
         }
+        if (print) cout << "sphere done" << endl;
     }
 
-    Ray reflectRay(Ray incomingRay, vec3 normal){
+    Ray reflectRay(Ray incomingRay, vec3 normal, bool print = false){
         vec3 incomingDirection = incomingRay.end.position-incomingRay.start.position;
-        Ray reflectedRay{incomingRay.end, incomingDirection};
+        vec4 start = (vec4(incomingRay.direction.direction, 1.0)*incomingRay.intersectionPoint.position.w);
+        if(print) cout << "Calculated start to: " << to_string(start) << endl;
+        Ray reflectedRay{Vertex(start), Direction(incomingDirection)};
         vec3 reflectedDirection = reflect(incomingDirection, normal);
         reflectedRay.direction = Direction(Vertex(reflectedDirection));
-        rayIntersection(reflectedRay);
+        if(print) cout << "Calculated start to: " << to_string(start) << endl;
+        rayIntersection(reflectedRay,print);
+        if(print) cout << "Calculated start to: " << to_string(start) << endl;
         return reflectedRay;
     }
 
@@ -599,12 +616,12 @@ void createScene(Scene *world){
     }*/
 
     //create Tetrahedron
-    world->tetras = Tetrahedron(vec3(6,0,-3),
-                                vec3(8,2,-3),
+    world->tetras = Tetrahedron(vec3(2,-2,0),
+                                vec3(9,3,-4),
                                 vec3(8,-2,-3),
-                                vec3(7,0,0));
+                                vec3(9,3,4));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(7,3,0));
+    world->spheres = Sphere(1,vec3(3,0,0));
 
 }
 
@@ -673,14 +690,20 @@ int main() {
                                      (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
                                       dz / subPixelsPerAxis) * pixelSize);
                 Ray current{cam.getEye(), end};
-                world.rayIntersection(current, false);
-
+                if(i == 341 && j == 310) {
+                    cout << "Current end: " << to_string(current.end.position) << endl;
+                }
+                world.rayIntersection(current, (i == 341 && j == 310));
+                if(i == 341 && j == 310){
+                    cout << "rayIntersection success" << endl;
+                }
                 Ray shadow{};
                 double u, v;
                 ColorDbl shadowOrNot = {1.0, 1.0, 1.0};
 
                 //Shadow for triangle objects
                 double distanceToLight;
+
                 if (!current.sphereIntersection) {
                     u = current.intersectionPoint.position.y;
                     v = current.intersectionPoint.position.z;
@@ -693,10 +716,15 @@ int main() {
                 else {
                     shadow.start = Vertex{(vec3) current.intersectionPoint.position};
                 }
+
+                if(i == 341 && j == 310) {
+                    cout << "Shadow end: " << to_string(shadow.end.position) << endl;
+                }
                 //Move start out of object
                 shadow.start.position = vec4((vec3) shadow.start.position -
                                              0.0001 * current.direction.direction, 1.0);
                 shadow.end = light.position;
+                shadow.calculateDirection();
                 world.rayShadowIntersection(shadow, (i == 700 && j == 400));
                 bool shadedRay;
                 shadedRay = shadow.intersectionPoint.position.w <= 1.0 + DBL_EPSILON &&
@@ -711,8 +739,8 @@ int main() {
                 if (current.color.g > maxIntensity) { maxIntensity = current.color.g; }
                 if (current.color.b > maxIntensity) { maxIntensity = current.color.b; }
             }
-            if(brightSpots) pixelAvg = sqrt(pixelAvg);
             pixelAvg /= raysPerPixel;
+            if(brightSpots) pixelAvg = sqrt(pixelAvg);
             cam.image[i * width + j] = Pixel(pixelAvg);
         }
     }
