@@ -10,7 +10,6 @@
 
 using namespace std;
 using namespace glm;
-long double EPSILON = 0.01;
 
 struct ColorDbl{
 
@@ -68,7 +67,7 @@ struct ColorDbl{
 
 };
 
-string to_string(ColorDbl color){
+[[maybe_unused]] string to_string(ColorDbl color){
     ostringstream res{};
     res << "R: " << color.r << ", G: " << color.g << ", B: " << color.b;
     return res.str();
@@ -80,7 +79,7 @@ string to_string(vec4 vector){
     return res.str();
 }
 
-string to_string(vec3 vector){
+[[maybe_unused]] string to_string(vec3 vector){
     ostringstream res{};
     res << "x: " << vector.x << ", y: " << vector.y << ", z: " << vector.z;
     return res.str();
@@ -95,14 +94,14 @@ ColorDbl sqrt(ColorDbl input){
 
 }
 
-ColorDbl operator*(ColorDbl const& color, double scalar){
+/*ColorDbl operator*(ColorDbl const& color, double scalar){
     ColorDbl ret{};
     ret.r = color.r*scalar;
     ret.g = color.g*scalar;
     ret.b = color.b*scalar;
     return ret;
 }
-
+*/
 vec3 operator* (double const& scalar,vec3 vector){
     vec3 tmp;
     tmp.x = scalar * vector.x;
@@ -180,8 +179,8 @@ struct Vertex {
 };
 
 struct Direction {
-    glm::vec3 direction;
-    Direction(): direction(glm::vec3{}) {}
+    vec3 direction;
+    //Direction(): direction(vec3{}) {}
     Direction(Vertex in) : direction(in.position){}
 
 };
@@ -189,20 +188,18 @@ struct Direction {
 struct Triangle;
 
 struct Ray {
-    Ray() : start{}, end{}, endTriangle{}, sphereIntersection(false){}
-    Ray(Vertex vertex1, Vertex vertex2) {
+    Ray() : start{}, end{}, endTriangle{}, sphereIntersection(false), direction(normalize(end - start)){}
+    Ray(Vertex vertex1, Vertex vertex2) : direction(normalize(vertex2 - vertex1)){
         start = vertex1;
         end = vertex2;
         endTriangle = nullptr;
-        direction.direction = normalize(vertex2 - vertex1);
         sphereIntersection = false;
     }
 
-    Ray(Vertex startP, Direction dir )
+    Ray(Vertex startP, Direction dir ) : direction(dir)
     {
         start = startP;
         endTriangle = nullptr;
-        direction = dir;
         sphereIntersection = false;
     }
 
@@ -232,11 +229,11 @@ struct Material{
 
 struct Triangle {
     Vertex vec0, vec1, vec2;
-    vec3 normal;
+    vec3 normal{};
     Material mat;
 
    // Triangle() : Triangle(Vertex(vec3{}),Vertex(vec3{}),Vertex(vec3{})){}
-    Triangle() {}
+    Triangle() = default;
     Triangle(Vertex v1, Vertex v2, Vertex v3, Material mat_){
         vec0 = v1;
         vec1 = v2;
@@ -263,7 +260,7 @@ struct Triangle {
         T = (vec3) (intersectingRay.start.position - vec0.position);
         E_1 = (vec3) (vec1.position - vec0.position);
         E_2 = (vec3) (vec2.position - vec0.position);
-        D = intersectingRay.end.position - intersectingRay.start.position;
+        D = intersectingRay.direction.direction;
         P = cross(D, E_2);
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
@@ -280,6 +277,7 @@ struct Triangle {
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
+                intersectingRay.intersectionPoint.position.w = tuv.x;
                 intersectingRay.color = this->mat.color_;
                 intersectingRay.sphereIntersection = false;
             }
@@ -296,7 +294,7 @@ struct Triangle {
 
 struct Tetrahedron {
     vector<Triangle> triangles;
-    Material mat = Material(ColorDbl(255,80,255), LAMBERTIAN);
+    Material mat = Material(ColorDbl(0,0,255), SPECULAR);
 
     Tetrahedron() {}
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
@@ -443,28 +441,36 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay, bool print = false) {
-        random_device rd;
-        mt19937 gen(rd());
-        uniform_real_distribution<> distrib(0, 1.0);
-        double random;
+
         for (int i = 0; i < 24; i++) {
-            if (walls[i].rayIntersection(intersectingRay)) { break; }
+            if (walls[i].rayIntersection(intersectingRay)) {
+                break;
+            }
         }
-        //tetras.rayIntersection(intersectingRay, random > 0.9999);
-        tetras.rayIntersection(intersectingRay);
-        spheres.rayIntersection(intersectingRay, print);
+        if(tetras.rayIntersection(intersectingRay)) {
+            Ray reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
+            intersectingRay.color = reflectedRay.color;
+
+        }
+        if(spheres.rayIntersection(intersectingRay, print)){
+            Ray reflectedRay = reflectRay(intersectingRay,spheres.getSphereNormal(intersectingRay.end));
+        }
+    }
+
+    Ray reflectRay(Ray incomingRay, vec3 normal){
+        vec3 incomingDirection = incomingRay.end.position-incomingRay.start.position;
+        Ray reflectedRay{incomingRay.end, incomingDirection};
+        vec3 reflectedDirection = reflect(incomingDirection, normal);
+        reflectedRay.direction = Direction(Vertex(reflectedDirection));
+        rayIntersection(reflectedRay);
+        return reflectedRay;
     }
 
 
     void rayShadowIntersection(Ray& intersectingRay, bool print = false) {
-        random_device rd;
-        mt19937 gen(rd());
-        uniform_real_distribution<> distrib(0, 1.0);
-        double random;
         for (int i = 0; i < 24; i++) {
             if (walls[i].rayIntersection(intersectingRay)) { break; }
         }
-        //tetras.rayIntersection(intersectingRay, random > 0.9999);
         tetras.rayIntersection(intersectingRay);
         spheres.rayShadowIntersection(intersectingRay, print);
     }
@@ -478,7 +484,7 @@ struct Pixel{
     Pixel() : color(ColorDbl{}){}
     Pixel(ColorDbl rgb) : color(rgb){}
     ColorDbl color;
-    Ray intersectingRay;        //Prepare for array/list/pointer
+    [[maybe_unused]] Ray intersectingRay;        //Prepare for array/list/pointer
 };
 
 struct Camera{
@@ -658,16 +664,15 @@ int main() {
             cam.image[i * width + j] = ColorDbl(100, 100, 100);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
-                Ray current{};
                 double dy = (randomRays) ? distrib(gen) : 0;
                 double dz = (randomRays) ? distrib(gen) : 0;
-                current.start = cam.getEye();
 
-                current.end = Vertex(0,
+                Vertex end = Vertex(0,
                                      (i - 400 + (double) (r % subPixelsPerAxis) / (double) subPixelsPerAxis +
                                       dy / subPixelsPerAxis) * pixelSize,
                                      (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
                                       dz / subPixelsPerAxis) * pixelSize);
+                Ray current{cam.getEye(), end};
                 world.rayIntersection(current, false);
 
                 Ray shadow{};
@@ -690,22 +695,12 @@ int main() {
                 }
                 //Move start out of object
                 shadow.start.position = vec4((vec3) shadow.start.position -
-                                             0.0001 * normalize(current.end.position - current.start.position), 1.0);
+                                             0.0001 * current.direction.direction, 1.0);
                 shadow.end = light.position;
                 world.rayShadowIntersection(shadow, (i == 700 && j == 400));
                 bool shadedRay;
-
-                if (i == 700 && j == 400) {
-                    cout << "sphereintersection: " << shadow.sphereIntersection << endl;
-
-                }
-                if(shadow.sphereIntersection) {
-                    shadedRay = shadow.intersectionPoint.position.w <= 1.0 + DBL_EPSILON &&
-                                shadow.intersectionPoint.position.w >= 0;
-                } else {
-                    shadedRay = (shadow.intersectionPoint.position.x <= 1.0 + DBL_EPSILON &&
-                                 shadow.intersectionPoint.position.x >= 0);
-                }
+                shadedRay = shadow.intersectionPoint.position.w <= 1.0 + DBL_EPSILON &&
+                            shadow.intersectionPoint.position.w >= 0;
                 distanceToLight = length(shadow.end - shadow.start);
                 shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
 
