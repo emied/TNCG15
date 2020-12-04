@@ -208,6 +208,7 @@ struct Ray {
     Triangle* endTriangle;
     Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
     Direction direction;
+    int bounces = 0;
     bool sphereIntersection;
 
     void calculateDirection() {
@@ -445,41 +446,36 @@ struct Scene {
 
 
     void rayIntersection(Ray& intersectingRay, bool print = false) {
-        if (print) cout << "Checking walls" << endl;
         for (int i = 0; i < 24; i++) {
-            if(print) cout << i << endl;
             if (walls[i].rayIntersection(intersectingRay)) {
                 break;
             }
         }
-        if(print) cout << "Walls done" << endl;
         if(tetras.rayIntersection(intersectingRay)) {
-            if(print) cout << intersectingRay.endTriangle << endl;
-            Ray reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal, print);
-            intersectingRay.color = reflectedRay.color * 0.8;
+            if(intersectingRay.bounces) {
+                intersectingRay.bounces--;
+                Ray reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
+                intersectingRay.color = reflectedRay.color * 0.8;
+            }
 
-        }
-        if(print){
-            cout << "walls and tetra done" << endl;
         }
         if(spheres.rayIntersection(intersectingRay, print)){
-            Ray reflectedRay = reflectRay(intersectingRay,spheres.getSphereNormal(intersectingRay.end));
-            intersectingRay.color = reflectedRay.color * 0.8;
-            //cout << "Sphere Normal: " << to_string(spheres.getSphereNormal(intersectingRay.end)) << endl;
+            vec3 normal = spheres.getSphereNormal(intersectingRay.end);
+            if(intersectingRay.bounces) {
+                intersectingRay.bounces--;
+                Ray reflectedRay = reflectRay(intersectingRay, spheres.getSphereNormal(intersectingRay.end));
+                intersectingRay.color = reflectedRay.color * 0.8;
+            }
         }
-        if (print) cout << "sphere done" << endl;
     }
 
-    Ray reflectRay(Ray incomingRay, vec3 normal, bool print = false){
+    Ray reflectRay(Ray incomingRay, vec3 normal){
         vec3 incomingDirection = incomingRay.end.position-incomingRay.start.position;
-        vec4 start = (vec4(incomingRay.direction.direction, 1.0)*incomingRay.intersectionPoint.position.w);
-        if(print) cout << "Calculated start to: " << to_string(start) << endl;
+        vec4 start = (vec4(incomingRay.direction.direction, 1.0)*incomingRay.intersectionPoint.position.w)+incomingRay.start.position;
         Ray reflectedRay{Vertex(start), Direction(incomingDirection)};
         vec3 reflectedDirection = reflect(incomingDirection, normal);
         reflectedRay.direction = Direction(Vertex(reflectedDirection));
-        if(print) cout << "Calculated start to: " << to_string(start) << endl;
-        rayIntersection(reflectedRay,print);
-        if(print) cout << "Calculated start to: " << to_string(start) << endl;
+        rayIntersection(reflectedRay);
         return reflectedRay;
     }
 
@@ -616,12 +612,12 @@ void createScene(Scene *world){
     }*/
 
     //create Tetrahedron
-    world->tetras = Tetrahedron(vec3(2,-2,0),
-                                vec3(9,3,-4),
+    world->tetras = Tetrahedron(vec3(6,0,-3),
+                                vec3(8,2,-3),
                                 vec3(8,-2,-3),
-                                vec3(9,3,4));
+                                vec3(7,0,0));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(3,0,0));
+    world->spheres = Sphere(1,vec3(7,3,0));
 
 }
 
@@ -657,7 +653,7 @@ int main() {
     time_t timer;
     double indirectLight = 0.1;
     double directLight = 1;
-    bool randomRays = false;            //Select if ray directions are randomized/dithered
+    bool randomRays = true;            //Select if ray directions are randomized/dithered
     bool brightSpots = true;           //Are there bright spots in scene?
 
 
@@ -690,13 +686,7 @@ int main() {
                                      (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
                                       dz / subPixelsPerAxis) * pixelSize);
                 Ray current{cam.getEye(), end};
-                if(i == 341 && j == 310) {
-                    cout << "Current end: " << to_string(current.end.position) << endl;
-                }
-                world.rayIntersection(current, (i == 341 && j == 310));
-                if(i == 341 && j == 310){
-                    cout << "rayIntersection success" << endl;
-                }
+                world.rayIntersection(current, false);
                 Ray shadow{};
                 double u, v;
                 ColorDbl shadowOrNot = {1.0, 1.0, 1.0};
@@ -717,9 +707,6 @@ int main() {
                     shadow.start = Vertex{(vec3) current.intersectionPoint.position};
                 }
 
-                if(i == 341 && j == 310) {
-                    cout << "Shadow end: " << to_string(shadow.end.position) << endl;
-                }
                 //Move start out of object
                 shadow.start.position = vec4((vec3) shadow.start.position -
                                              0.0001 * current.direction.direction, 1.0);
