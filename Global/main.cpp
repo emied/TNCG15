@@ -16,6 +16,9 @@ using namespace glm;
 
 const double indirectLight = 0.1;
 const double directLight = 1;
+const int cutoff_value = 100;
+const int nr_shadowRays = 10;
+
 
 struct ColorDbl{
 
@@ -159,10 +162,10 @@ Stream & operator<<(Stream & out, image const& img){
 
 struct Vertex {
     vec4 position;
-    Vertex():position(vec3(0.0,0.0,0.0), 1.0){}   //Default constructor
+    Vertex():position(vec3(0.0,0.0,0.0), DBL_MAX){}   //Default constructor
     Vertex(double x, double y, double z, double w) : position(vec4(x, y, z, w)){}
-    Vertex(double x, double y, double z) : position(vec4(x, y, z, 1.0)){}
-    Vertex(vec3 in): position(in, 1.0){}
+    Vertex(double x, double y, double z) : position(vec4(x, y, z, DBL_MAX)){}
+    Vertex(vec3 in): position(in, DBL_MAX){}
 
     Vertex& operator+=(Vertex const& other){
         position.x += other.position.x;
@@ -218,8 +221,9 @@ struct Ray {
     Vertex start, end;
     ColorDbl color;
     Triangle* endTriangle;
-    Vertex intersectionPoint{vec3(DBL_MAX,DBL_MAX,DBL_MAX)};
+    Vertex intersectionPoint{vec4(DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX)};
     Direction direction;
+    int bounces = 20;
     bool sphereIntersection;
 
     void calculateDirection() {
@@ -280,16 +284,18 @@ struct Triangle {
         P = cross(D, E_2);
         Q = cross(T, E_1);
         vec3 tuv = vec3(dot(Q, E_2), dot(P, T), dot(Q, D)) / dot(P, E_1);
-        if(print){
+        if(print) {
             cout << "t: " << tuv.x << ", u: " << tuv.y << ", v: " << tuv.z << ", u+v = " << tuv.y + tuv.z << endl;
             cout << "vec0 = x: " << vec0.position.x << " y: " << vec0.position.y << " z: " << vec0.position.z << endl;
-            cout << "Intersecting ray intersection point:" << endl << "x = " << intersectingRay.intersectionPoint.position.x <<
-                                                                ", y = " << intersectingRay.intersectionPoint.position.y <<
-                                                                ", z = " << intersectingRay.intersectionPoint.position.z << endl;
+            cout << "Intersecting ray intersection point:" << endl << "x = "
+                 << intersectingRay.intersectionPoint.position.x <<
+                 ", y = " << intersectingRay.intersectionPoint.position.y <<
+                 ", z = " << intersectingRay.intersectionPoint.position.z <<
+                 ", w = " << intersectingRay.intersectionPoint.position.w << endl;
 
         }
         if (tuv.x > 0 && tuv.y >= 0 && tuv.z >= 0 && tuv.y + tuv.z <= (1.000005)) {
-            if (intersectingRay.intersectionPoint.position.x >= tuv.x) {
+            if (intersectingRay.intersectionPoint.position.w >= tuv.x) {
                 //Update intersectingRay here
                 intersectingRay.endTriangle = this;
                 intersectingRay.intersectionPoint = Vertex(tuv);
@@ -456,6 +462,7 @@ struct Sphere{
 
 struct LightSource{
     vec3 position;
+    vec3 normal;
     vector<Triangle> triangles;
     LightSource(): position(vec3{}){
         Vertex corner[4];
@@ -466,11 +473,12 @@ struct LightSource{
         corner[3] = Vertex(position.x+0.5,position.y+0.5,position.z);
         triangles.emplace_back(corner[0],corner[1],corner[2],Material(ColorDbl(255),LIGHTSOURCE));
         triangles.emplace_back(corner[3],corner[2],corner[1],Material(ColorDbl(255),LIGHTSOURCE));
+        normal = triangles[0].normal;
     }
-    bool rayIntersection(Ray& intersectingRay) {
+    bool rayIntersection(Ray& intersectingRay, bool print = false) {
         bool collision = false;
         for(auto & triangle : triangles) {
-            if(triangle.rayIntersection(intersectingRay)){
+            if(triangle.rayIntersection(intersectingRay, print)){
                 collision = true;
             }
         }
@@ -478,6 +486,10 @@ struct LightSource{
     }
 
 };
+
+random_device rd;
+mt19937  gen(rd());
+uniform_int_distribution<> distrib(0,1000);
 
 struct Scene {
     Triangle walls[24]{};
@@ -487,36 +499,75 @@ struct Scene {
     bool randomRoof = false;
     Scene() = default;
 
+    static Vertex getShadowrayStart(Ray& intersectingRay){
+        double u = intersectingRay.intersectionPoint.position.y;
+        double v = intersectingRay.intersectionPoint.position.z;
+        Vertex start = Vertex{(1 - u - v) * intersectingRay.endTriangle->vec0.position +
+                              u * intersectingRay.endTriangle->vec1.position +
+                              v * intersectingRay.endTriangle->vec2.position};
+        start.position = vec4((vec3) start.position -
+                              0.0001 * intersectingRay.direction.direction, DBL_MAX);
+        return start;
+    }
+
+    double getShadeValue(Ray& intersectingRay){
+        uniform_real_distribution<> shadowDistributionX(areaLight.triangles[0].vec0.position.x,areaLight.triangles[1].vec0.position.x);
+        uniform_real_distribution<> shadowDistributionY(areaLight.triangles[0].vec0.position.y,areaLight.triangles[1].vec0.position.y);
+        Vertex start = getShadowrayStart(intersectingRay);
+        int litShadowrays = 0;
+        for (int i = 0; i < nr_shadowRays; i++) {
+            Vertex end = Vertex(shadowDistributionX(gen), shadowDistributionY(gen), areaLight.position.z);
+            Ray shadowRay{start, end};
+            rayShadowIntersection(shadowRay);
+            if (!(shadowRay.intersectionPoint.position.w <= 1.0 - DBL_EPSILON &&
+                  shadowRay.intersectionPoint.position.w >= 0)) {
+                litShadowrays++;
+            }
+        }
+        return (double)((double) litShadowrays / (double)nr_shadowRays);
+    }
 
     void rayIntersection(Ray& intersectingRay, bool print = false) { // NOLINT(misc-no-recursion)
+        int russian = distrib(gen);
+        intersectingRay.bounces--;
+
+        //Cut ray if we end it on russian roulette
+        if(russian < cutoff_value || intersectingRay.bounces == 0){
+            if(intersectingRay.bounces < 10) cout << "Many bounces" << endl;
+            return;
+        }
+        //Check if the ray intersects the area light source.
         if (areaLight.rayIntersection(intersectingRay)) {
-            double lightFactor = -dot(intersectingRay.endTriangle->normal, normalize(intersectingRay.direction.direction));
-            intersectingRay.color *= lightFactor;       //1000/pi = L_0 ?
+            intersectingRay.color = ColorDbl(951);       //1000/pi = L_0 ?
+        //If hit on the area light source, don't bother checking walls
+        //If missing ALS, check walls
         } else {
             for (auto & wall : walls) {
                 if (wall.rayIntersection(intersectingRay)) {
-                    double u = intersectingRay.intersectionPoint.position.y;
-                    double v = intersectingRay.intersectionPoint.position.z;
-                    Vertex start = Vertex{(1 - u - v) * intersectingRay.endTriangle->vec0.position +
-                                          u * intersectingRay.endTriangle->vec1.position +
-                                          v * intersectingRay.endTriangle->vec2.position};
-                    start.position = vec4((vec3) start.position -
-                                                  0.0001 * intersectingRay.direction.direction, 1.0);
-                    Ray shadowRay{start, areaLight.position};
-                    rayShadowIntersection(shadowRay);
-                    if(shadowRay.intersectionPoint.position.w <= 1.0 + DBL_EPSILON && shadowRay.intersectionPoint.position.w >= 0){
-                        //Apply indirect light
-                        ColorDbl lightValue = ColorDbl{indirectLight};
-                        intersectingRay.color *= lightValue;
-                    } else {
-                        //Apply direct light
 
-                        double lightFactor = dot(intersectingRay.endTriangle->normal, normalize(intersectingRay.direction.direction));
-
-                        ColorDbl lightValue = ColorDbl{directLight}*lightFactor;
-
-                        intersectingRay.color *= lightValue;
+                    Vertex start = getShadowrayStart(intersectingRay);
+                    double percentShadow = getShadeValue(intersectingRay);
+                    intersectingRay.color = intersectingRay.color*percentShadow;
+                    double lightFactor = dot(intersectingRay.endTriangle->normal,normalize(vec3(areaLight.position-(vec3)start.position)));
+                    //double lightFactor = -dot(intersectingRay.endTriangle->normal,intersectingRay.direction.direction);
+                    if(lightFactor < 0){
+                        lightFactor = 0;
                     }
+                    intersectingRay.color *= lightFactor;
+                   /*
+
+                    //Apply indirect light
+                    ColorDbl lightValue = ColorDbl{indirectLight};
+                    intersectingRay.color *= lightValue;
+
+                    //Apply direct light
+
+                    double lightFactor = -dot(intersectingRay.endTriangle->normal,
+                                              normalize(intersectingRay.direction.direction));
+                    lightValue = ColorDbl{directLight} * lightFactor;
+
+                    intersectingRay.color *= lightValue;
+*/
 
                     /*
                     double lightFactor = abs(
@@ -526,25 +577,35 @@ struct Scene {
                     break;
                 }
             }
-
+            //Walls have been checked, check for closer hit on Tetrahedron
             if (tetras.rayIntersection(intersectingRay)) {
-                Ray *reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
-                double lightFactor = dot(intersectingRay.endTriangle->normal, normalize(intersectingRay.direction.direction));
+                Ray *reflectedRay;
+                reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
+                double percentShadow = getShadeValue(intersectingRay);
+                intersectingRay.color = intersectingRay.color*percentShadow;
+
+                Vertex start = getShadowrayStart(intersectingRay);
+                double lightFactor = dot(intersectingRay.endTriangle->normal,
+                                         normalize(vec3(areaLight.position - (vec3) start.position)));
                 intersectingRay.color = reflectedRay->color * lightFactor;
                 delete (reflectedRay);
 
             }
+            //Same as for Tetrahedron, walls are hit, find closer sphere hit
             if (spheres.rayIntersection(intersectingRay, print)) {
                 vec3 normal = spheres.getSphereNormal(intersectingRay.intersectionPoint.position);
-                Ray *reflectedRay = reflectRay(intersectingRay,
-                                               spheres.getSphereNormal(intersectingRay.intersectionPoint.position));
-                double lightFactor = -dot(spheres.getSphereNormal(intersectingRay.intersectionPoint.position), normalize(intersectingRay.direction.direction));
+                Ray *reflectedRay;
+                reflectedRay = reflectRay(intersectingRay,
+                                          spheres.getSphereNormal(intersectingRay.intersectionPoint.position));
+                double lightFactor = -dot(spheres.getSphereNormal(intersectingRay.intersectionPoint.position),
+                                          normalize(intersectingRay.direction.direction));
                 intersectingRay.color = reflectedRay->color * lightFactor;
                 delete (reflectedRay);
-
             }
         }
     }
+
+
     Ray* reflectRay(Ray incomingRay, vec3 normal){ // NOLINT(misc-no-recursion)
         vec3 incomingDirection = incomingRay.end.position-incomingRay.start.position;
         vec4 start = (vec4(incomingRay.direction.direction, 1.0)*incomingRay.intersectionPoint.position.w)+incomingRay.start.position;
@@ -630,12 +691,10 @@ void createScene(Scene *world){
     Material yellow_lam = Material(ColorDbl(255,255,0), LAMBERTIAN);
     Material teal_lam = Material(ColorDbl(0,255,255), LAMBERTIAN);
 
-    random_device rd;
-    mt19937  gen(rd());
-    uniform_int_distribution<> distrib(50,150);
+    uniform_int_distribution<> distrib2(50,150);
     int val = 254;
     if(world->randomRoof){
-        val = distrib ( gen);
+        val = distrib2 ( gen);
     }
     cout << "Grey value: " << val << endl;
     grey_lam.color_ = ColorDbl(val);
@@ -687,13 +746,14 @@ void createScene(Scene *world){
     }*/
 
     //create Tetrahedron
-    vec3 tetraCenter = vec3(4,-2,-1);
-    world->tetras = Tetrahedron(vec3(tetraCenter.x+0,tetraCenter.y+0,tetraCenter.z+1),
-                                vec3(tetraCenter.x-0.5,tetraCenter.y-0.5,tetraCenter.z-1.5),
-                                vec3(tetraCenter.x+1,tetraCenter.y+1.5,tetraCenter.z-1.5),
-                                vec3(tetraCenter.x+1,tetraCenter.y-1.5,tetraCenter.z-1.5));
+    vec3 tetraCenter = vec3(8,-2,-1);
+    double size = 0.8;
+    world->tetras = Tetrahedron(vec3(tetraCenter.x+0,tetraCenter.y+0,tetraCenter.z+2*size),
+                                vec3(tetraCenter.x-size,tetraCenter.y-size,tetraCenter.z-3*size),
+                                vec3(tetraCenter.x+2*size,tetraCenter.y+3*size,tetraCenter.z-3*size),
+                                vec3(tetraCenter.x+2*size,tetraCenter.y-3*size,tetraCenter.z-3*size));
     //Create Sphere
-    world->spheres = Sphere(1,vec3(8,3,0));
+    world->spheres = Sphere(1.8,vec3(4,2,0));
 
 }
 
@@ -728,25 +788,17 @@ int main() {
     createScene(&world);
 
     double maxIntensity = 0;
-    random_device rd;
-    mt19937 gen(rd());
+    random_device randomDevice;
+    mt19937 gen(randomDevice());
     uniform_real_distribution<> distrib(0, 1.0);
     time_t timer;
-
-
-    //Add point light
-    LightSource light;
-    //light.color = vec3{1.0,1.0,1.0};      //old
-    //light.position = vec3{7,-3,0};                      //behind light
-    //light.position = vec3{5,0,5};              //roof light
-    //light.position = cam.getEye().position;
 
 
     double seconds = time(&timer);
     for (int i = 0; i < width; i++) {
         double random = distrib(gen);
         if(random > 0.95){
-            double progress = (double)(i*width)/(width*height);
+            double progress = (double)(i*height)/(width*height);
             int progressPercent = (int) (progress*100);
             cout << "Rendering ..." << progressPercent << "%." << endl;
         }
@@ -758,55 +810,20 @@ int main() {
                 double dz = (randomRays) ? distrib(gen) : 0;
 
                 Vertex end = Vertex(0,
-                                     (i - 400 + (double) (r % subPixelsPerAxis) / (double) subPixelsPerAxis +
+                                     (i - floor(width/2) + (double) (r % subPixelsPerAxis) / (double) subPixelsPerAxis +
                                       dy / subPixelsPerAxis) * pixelSize,
-                                     (j - 400 + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
+                                     (j - floor(height/2) + floor(r / subPixelsPerAxis) / subPixelsPerAxis +
                                       dz / subPixelsPerAxis) * pixelSize);
                 Ray* current = new Ray(cam.getEye(),end);
                 world.rayIntersection(*current);
-                Ray* shadow = new Ray();
-                double u, v;
-                ColorDbl shadowOrNot = {1.0, 1.0, 1.0};
-                //Shadow for triangle objects
-                double distanceToLight;
-/*
-                if (!current->sphereIntersection) {
-                    u = current->intersectionPoint.position.y;
-                    v = current->intersectionPoint.position.z;
-                    shadow->start = Vertex{(1 - u - v) * current->endTriangle->vec0.position +
-                                          u * current->endTriangle->vec1.position +
-                                          v * current->endTriangle->vec2.position};
+
+                if(current != NULL) {
+                    pixelAvg += (current->color);
+                    if (current->color.r > maxIntensity) { maxIntensity = current->color.r; }
+                    if (current->color.g > maxIntensity) { maxIntensity = current->color.g; }
+                    if (current->color.b > maxIntensity) { maxIntensity = current->color.b; }
+                    delete (current);
                 }
-
-                    //Shadow for implicit objects
-                else {
-                    shadow->start = Vertex{(vec3) current->intersectionPoint.position};
-                }
-*/
-/*
-                //Move start out of object
-                shadow->start.position = vec4((vec3) shadow->start.position -
-                                             0.0001 * current->direction.direction, 1.0);
-                shadow->end = light.position;
-                shadow->calculateDirection();
-                world.rayShadowIntersection(*shadow);
-                bool shadedRay;
-                shadedRay = shadow->intersectionPoint.position.w <= 1.0 + DBL_EPSILON &&
-                            shadow->intersectionPoint.position.w >= 0;
-                distanceToLight = length(shadow->end - shadow->start);
-
-                shadowOrNot = (shadedRay) ? ColorDbl{indirectLight} : ColorDbl{directLight};
-
-                shadowOrNot *= (1.0 / std::max(1.0,pow(distanceToLight, 2)));
-*/
-                //shadowOrNot *= (1.0 / pow(distanceToLight, 2));
-                pixelAvg += (current->color);
-
-                if (current->color.r > maxIntensity) { maxIntensity = current->color.r; }
-                if (current->color.g > maxIntensity) { maxIntensity = current->color.g; }
-                if (current->color.b > maxIntensity) { maxIntensity = current->color.b; }
-                delete(shadow);
-                delete(current);
             }
             pixelAvg /= raysPerPixel;
             if(brightSpots) pixelAvg = sqrt(pixelAvg);
@@ -819,8 +836,8 @@ int main() {
 
     if(brightSpots) maxIntensity = sqrt(maxIntensity);
     //write cam.image to output img
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
             img.r(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.r/maxIntensity;
             img.g(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.g/maxIntensity;
             img.b(i, j) = 255.99 * cam.image[(height - 1 - i) * width + j].color.b/maxIntensity;
