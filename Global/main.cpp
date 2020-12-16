@@ -316,7 +316,7 @@ struct Triangle {
 
 struct Tetrahedron {
     vector<Triangle> triangles;
-    Material mat = Material(ColorDbl(0,0,0), SPECULAR);
+    Material mat = Material(ColorDbl(0.7,0.7,0.7), SPECULAR);
 
     Tetrahedron() = default;
     Tetrahedron(Vertex v1, Vertex v2, Vertex v3, Vertex v4){
@@ -484,8 +484,8 @@ struct Scene {
         Vertex start = Vertex{(1 - u - v) * intersectingRay.endTriangle->vec0.position +
                               u * intersectingRay.endTriangle->vec1.position +
                               v * intersectingRay.endTriangle->vec2.position};
-        start.position = vec4((vec3) start.position -
-                              0.0001 * intersectingRay.direction.direction, DBL_MAX);
+        start.position = vec4((vec3) start.position +
+                              0.0001 * intersectingRay.endTriangle->normal, DBL_MAX);
         return start;
     }
 
@@ -512,22 +512,24 @@ struct Scene {
         intersectingRay.bounces--;
 
         //Cut ray if we end it on russian roulette      TODO: NOPE!
-        if(russian < cutoff_value || intersectingRay.bounces == 0){
-            if(intersectingRay.bounces < 10) cout << "Many bounces" << endl;
-            return;
-        }
+
         //Check if the ray intersects the area light source. Terminates the ray if it's the closest hit.
         if (areaLight.rayIntersection(intersectingRay)) {
             intersectingRay.color = ColorDbl(1.0);       // TODO: Better calculation here initial value L_0 doesn't matter? 1000? >1000?
         //If hit on the area light source, don't bother checking walls
         //If missing ALS, check walls
         } else {
+            if(russian < cutoff_value || intersectingRay.bounces == 0){
+                if(intersectingRay.bounces < 10) cout << "Many bounces" << endl;
+                return;
+            }
             for (auto & wall : walls) {
                 //If wall is hit, calculate end point through multiple shadowrays.
                 if (wall.rayIntersection(intersectingRay)) {
 
                     Vertex start = getShadowrayStart(intersectingRay);
                     double fractionLight = getShadeValue(intersectingRay);
+                    fractionLight += 0.1;
                     intersectingRay.color = intersectingRay.color * fractionLight;
                     double lightFactor = dot(intersectingRay.endTriangle->normal,normalize(vec3(areaLight.position-(vec3)start.position)));
                     //Clamp lightFactor
@@ -541,6 +543,24 @@ struct Scene {
             }
             //Walls have been checked, check for closer hit on Tetrahedron
             if (tetras.rayIntersection(intersectingRay)) {
+                if(russian < cutoff_value || intersectingRay.bounces == 0){
+                    if(intersectingRay.bounces < 10) cout << "Many bounces" << endl;
+                    return;
+                }
+                //If wall is hit, calculate end point through multiple shadowrays.
+                Vertex start = getShadowrayStart(intersectingRay);
+                double fractionLight = getShadeValue(intersectingRay);
+                intersectingRay.color = intersectingRay.color * fractionLight;
+                double lightFactor = dot(intersectingRay.endTriangle->normal,
+                                         normalize(vec3(areaLight.position - (vec3) start.position)));
+                //Clamp lightFactor
+                if (lightFactor < 0) {
+                    lightFactor = 0;
+                }
+                intersectingRay.color *= lightFactor;
+
+
+                /*
                 Ray *reflectedRay;
                 reflectedRay = reflectRay(intersectingRay, intersectingRay.endTriangle->normal);
                 double percentShadow = getShadeValue(intersectingRay);
@@ -551,7 +571,7 @@ struct Scene {
                                          normalize(vec3(areaLight.position - (vec3) start.position)));
                 intersectingRay.color = reflectedRay->color * lightFactor;
                 delete (reflectedRay);
-
+                */
             }
             //Same as for Tetrahedron, walls are hit, find closer sphere hit
             if (spheres.rayIntersection(intersectingRay, print)) {
@@ -708,14 +728,14 @@ void createScene(Scene *world){
     }*/
 
     //create Tetrahedron
-    vec3 tetraCenter = vec3(8,-2,-1);
+    vec3 tetraCenter = vec3(4.5,-2,-1);
     double size = 0.8;
     world->tetras = Tetrahedron(vec3(tetraCenter.x+0,tetraCenter.y+0,tetraCenter.z+2*size),
                                 vec3(tetraCenter.x-size,tetraCenter.y-size,tetraCenter.z-3*size),
                                 vec3(tetraCenter.x+2*size,tetraCenter.y+3*size,tetraCenter.z-3*size),
                                 vec3(tetraCenter.x+2*size,tetraCenter.y-3*size,tetraCenter.z-3*size));
     //Create Sphere
-    world->spheres = Sphere(1.8,vec3(4,2,0));
+    world->spheres = Sphere(1.8,vec3(7,2,0));
 
 }
 
@@ -732,7 +752,7 @@ int main() {
 
 
     Scene world;
-    const int subPixelsPerAxis = 1;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int subPixelsPerAxis = 4;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
     const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
