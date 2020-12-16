@@ -16,7 +16,7 @@ using namespace glm;
 
 const double indirectLight = 0.1;
 const double directLight = 1;
-const int cutoff_value = 100;
+const int cutoff_value = 200;
 const int nr_shadowRays = 10;
 
 
@@ -269,7 +269,7 @@ struct Triangle {
         normal = normalize(cross((vec3)(v2.position-v1.position),(vec3)(v3.position-v1.position)));
         mat = mat_;
         if(dot(normal, (vec3)v4.position) > 0){
-            normal = -normal;
+            normal = normalize(-normal);
         }
     }
 
@@ -348,7 +348,7 @@ struct Sphere{
     Sphere(double radius, vec3 centerSphere){
         centerOfSphere = centerSphere;
         rad = radius;
-        mat = Material(ColorDbl(255,0,0),LAMBERTIAN);
+        mat = Material(ColorDbl(1.0,0,0),LAMBERTIAN);
     }
 
     //inspired by
@@ -359,8 +359,6 @@ struct Sphere{
         vec3 L = centerOfSphere - (vec3) ray.start.position;
 
         double tca = dot(L, normDirection);
-
-        if(print) cout << "TCA: " << tca << endl;
 
         if (tca < DBL_EPSILON) return false;
 
@@ -374,11 +372,7 @@ struct Sphere{
         double t0 = tca - thc;
         double t1 = tca + thc;
 
-        if(print) cout << "t0=" << t0 << ", t1=" << t1 << endl;
-
         if (t0 > t1) swap(t0, t1);
-
-        if(print) cout << "After swap, t0=" << t0 << endl;
 
         if (t0 < DBL_EPSILON) {
             t0 = t1;
@@ -386,28 +380,19 @@ struct Sphere{
                 return false;
             }
         }
-        if(print) cout << "Checking hit, t0=" << t0 << ", old x=" << ray.intersectionPoint.position.x << endl;
         if (ray.intersectionPoint.position.x > t0) {
             //Hit!
-
             ray.intersectionPoint = vec3(ray.start.position.x, ray.start.position.y, ray.start.position.z) + t0 * normDirection;
             ray.intersectionPoint.position.w = t0;
             ray.sphereIntersection = true;
-            /*if (print) {
-                cout << "Hit! Intersection point:\nx: " << to_string(ray.intersectionPoint.position) <<
-                        "\ncolor = " << to_string(ray.color) << endl;
-            }*/
             return true;
-        }
-        if(print){
-            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
         }
         return false;
 
     }
 
     bool rayShadowIntersection(Ray& ray, bool print = false) const {
-        vec3 direction = vec3(ray.end - ray.start);
+        vec3 direction = ray.direction.direction;
         vec3 normDirection = normalize(direction);
         vec3 L = centerOfSphere - (vec3) ray.start.position;
 
@@ -441,14 +426,7 @@ struct Sphere{
             ray.intersectionPoint.position.w = t0;
             ray.color = mat.color_;
             ray.sphereIntersection = true;
-            /*if (print) {
-                cout << "Hit! Intersection point:\nx: " << to_string(ray.intersectionPoint.position) <<
-                        "\ncolor = " << to_string(ray.color) << endl;
-            }*/
             return true;
-        }
-        if(print){
-            cout << "Intersection point: " << to_string(ray.intersectionPoint.position) << "\nt-val: " << t0 << endl;
         }
         return false;
 
@@ -462,7 +440,7 @@ struct Sphere{
 
 struct LightSource{
     vec3 position;
-    vec3 normal;
+    vec3 normal{};
     vector<Triangle> triangles;
     LightSource(): position(vec3{}){
         Vertex corner[4];
@@ -471,8 +449,8 @@ struct LightSource{
         corner[1] = Vertex(position.x-0.5,position.y+0.5,position.z);
         corner[2] = Vertex(position.x+0.5,position.y-0.5,position.z);
         corner[3] = Vertex(position.x+0.5,position.y+0.5,position.z);
-        triangles.emplace_back(corner[0],corner[1],corner[2],Material(ColorDbl(255),LIGHTSOURCE));
-        triangles.emplace_back(corner[3],corner[2],corner[1],Material(ColorDbl(255),LIGHTSOURCE));
+        triangles.emplace_back(corner[0],corner[1],corner[2],Material(ColorDbl(1.0),LIGHTSOURCE));
+        triangles.emplace_back(corner[3],corner[2],corner[1],Material(ColorDbl(1.0),LIGHTSOURCE));
         normal = triangles[0].normal;
     }
     bool rayIntersection(Ray& intersectingRay, bool print = false) {
@@ -487,17 +465,18 @@ struct LightSource{
 
 };
 
-random_device rd;
-mt19937  gen(rd());
-uniform_int_distribution<> distrib(0,1000);
 
 struct Scene {
     Triangle walls[24]{};
     Tetrahedron tetras{};
     Sphere spheres{};
     LightSource areaLight{};
+    random_device rd;
+    mt19937 gen;
     bool randomRoof = false;
-    Scene() = default;
+    Scene() {
+        gen = (mt19937(rd()));
+    }
 
     static Vertex getShadowrayStart(Ray& intersectingRay){
         double u = intersectingRay.intersectionPoint.position.y;
@@ -528,52 +507,35 @@ struct Scene {
     }
 
     void rayIntersection(Ray& intersectingRay, bool print = false) { // NOLINT(misc-no-recursion)
+        uniform_int_distribution<> distrib(0,1000);
         int russian = distrib(gen);
         intersectingRay.bounces--;
 
-        //Cut ray if we end it on russian roulette
+        //Cut ray if we end it on russian roulette      TODO: NOPE!
         if(russian < cutoff_value || intersectingRay.bounces == 0){
             if(intersectingRay.bounces < 10) cout << "Many bounces" << endl;
             return;
         }
-        //Check if the ray intersects the area light source.
+        //Check if the ray intersects the area light source. Terminates the ray if it's the closest hit.
         if (areaLight.rayIntersection(intersectingRay)) {
-            intersectingRay.color = ColorDbl(951);       //1000/pi = L_0 ?
+            intersectingRay.color = ColorDbl(1.0);       // TODO: Better calculation here initial value L_0 doesn't matter? 1000? >1000?
         //If hit on the area light source, don't bother checking walls
         //If missing ALS, check walls
         } else {
             for (auto & wall : walls) {
+                //If wall is hit, calculate end point through multiple shadowrays.
                 if (wall.rayIntersection(intersectingRay)) {
 
                     Vertex start = getShadowrayStart(intersectingRay);
-                    double percentShadow = getShadeValue(intersectingRay);
-                    intersectingRay.color = intersectingRay.color*percentShadow;
+                    double fractionLight = getShadeValue(intersectingRay);
+                    intersectingRay.color = intersectingRay.color * fractionLight;
                     double lightFactor = dot(intersectingRay.endTriangle->normal,normalize(vec3(areaLight.position-(vec3)start.position)));
-                    //double lightFactor = -dot(intersectingRay.endTriangle->normal,intersectingRay.direction.direction);
+                    //Clamp lightFactor
                     if(lightFactor < 0){
                         lightFactor = 0;
                     }
                     intersectingRay.color *= lightFactor;
-                   /*
 
-                    //Apply indirect light
-                    ColorDbl lightValue = ColorDbl{indirectLight};
-                    intersectingRay.color *= lightValue;
-
-                    //Apply direct light
-
-                    double lightFactor = -dot(intersectingRay.endTriangle->normal,
-                                              normalize(intersectingRay.direction.direction));
-                    lightValue = ColorDbl{directLight} * lightFactor;
-
-                    intersectingRay.color *= lightValue;
-*/
-
-                    /*
-                    double lightFactor = abs(
-                            dot(intersectingRay.endTriangle->normal, normalize(intersectingRay.direction.direction)));
-                    intersectingRay.color *= lightFactor;
-                     */
                     break;
                 }
             }
@@ -682,19 +644,19 @@ void createScene(Scene *world){
     Vertex vrtx6f = Vertex(0.0, -6.0, -5.0, 1.0); //vrtx6f
 
 
-    Material white_lam = Material(ColorDbl(255,255,255), LAMBERTIAN);
-    Material red_lam = Material(ColorDbl(255,0,0), LAMBERTIAN);
-    Material blue_lam = Material(ColorDbl(0,0,255), LAMBERTIAN);
-    Material green_lam = Material(ColorDbl(0,255,0), LAMBERTIAN);
-    Material purple_lam = Material(ColorDbl(255,0,255), LAMBERTIAN);
-    Material grey_lam = Material(ColorDbl(254,254,254), LAMBERTIAN);
-    Material yellow_lam = Material(ColorDbl(255,255,0), LAMBERTIAN);
-    Material teal_lam = Material(ColorDbl(0,255,255), LAMBERTIAN);
+    Material white_lam = Material(ColorDbl(1.0,1.0,1.0), LAMBERTIAN);
+    Material red_lam = Material(ColorDbl(1.0,0,0), LAMBERTIAN);
+    Material blue_lam = Material(ColorDbl(0,0,1.0), LAMBERTIAN);
+    Material green_lam = Material(ColorDbl(0,1.0,0), LAMBERTIAN);
+    Material purple_lam = Material(ColorDbl(1.0,0,1.0), LAMBERTIAN);
+    Material grey_lam = Material(ColorDbl(1.0,1.0,1.0), LAMBERTIAN);
+    Material yellow_lam = Material(ColorDbl(1.0,1.0,0), LAMBERTIAN);
+    Material teal_lam = Material(ColorDbl(0,1.0,1.0), LAMBERTIAN);
 
     uniform_int_distribution<> distrib2(50,150);
-    int val = 254;
+    double val = 1.0;
     if(world->randomRoof){
-        val = distrib2 ( gen);
+        val = (double)distrib2 (world->gen)/255.99;
     }
     cout << "Grey value: " << val << endl;
     grey_lam.color_ = ColorDbl(val);
@@ -803,7 +765,7 @@ int main() {
             cout << "Rendering ..." << progressPercent << "%." << endl;
         }
         for (int j = 0; j < height; j++) {
-            cam.image[i * width + j] = ColorDbl(100, 100, 100);
+            cam.image[i * width + j] = ColorDbl(0.4, 0.4, 0.4);
             ColorDbl pixelAvg{};
             for (int r = 0; r < raysPerPixel; r++) {
                 double dy = (randomRays) ? distrib(gen) : 0;
