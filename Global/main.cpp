@@ -17,7 +17,7 @@ using namespace glm;
 const double indirectLight = 0.1;
 const double directLight = 1;
 const int cutoff_value = 200;
-const int nr_shadowRays = 10;
+const int nr_shadowRays = 1;
 
 
 struct ColorDbl{
@@ -752,7 +752,7 @@ int main() {
 
 
     Scene world;
-    const int subPixelsPerAxis = 4;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
+    const int subPixelsPerAxis = 1;        //Anti-aliasing level, subPixelsPerAxis = k, k = [1,2,3,...];
     const int raysPerPixel = subPixelsPerAxis*subPixelsPerAxis;
     const int width = 800;
     const int height = 800;
@@ -827,7 +827,7 @@ int main() {
     }
 
     cout << "Generated an image!" << endl;
-    string filename = "Scene_aa_" + to_string((raysPerPixel)) + ".bmp";
+    string filename = "Scene_aa_" + to_string((raysPerPixel)) + "_" + to_string(seconds) + "s.bmp";
     ofstream(filename, ios_base::out | ios_base::binary) << img;
     cout << "Wrote file " << filename << endl;
 
